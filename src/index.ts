@@ -269,7 +269,12 @@ export default class CanvasSelect extends EventBus {
   }
   handleMouseDown(e: MouseEvent | TouchEvent) {
     e.stopPropagation();
-    if (this.allowPanning) {
+    const isMobile = window.TouchEvent && e instanceof TouchEvent;
+    if (
+      this.allowPanning ||
+      (!isMobile && (e as MouseEvent).buttons === 2 && e.which === 3) ||
+      (isMobile && e.touches.length === 1 && !this.isTouch2)
+    ) {
       this.isDragging = true;
       this.dragStartX = (e as MouseEvent).clientX;
       this.dragStartY = (e as MouseEvent).clientY;
@@ -280,7 +285,6 @@ export default class CanvasSelect extends EventBus {
     this.evt = e;
     if (this.lock) return;
     const { mouseX, mouseY, mouseCX, mouseCY } = this.mergeEvent(e);
-    const isMobile = window.TouchEvent && e instanceof TouchEvent;
     const offsetX = Math.round(mouseX / this.scale) + this.originX / this.scale;
     const offsetY = Math.round(mouseY / this.scale) + this.originY / this.scale;
     this.mouse =
@@ -393,7 +397,12 @@ export default class CanvasSelect extends EventBus {
   }
   handelMouseMove(e: MouseEvent | TouchEvent) {
     e.stopPropagation();
-    if (this.isDragging && this.allowPanning) {
+    const isMobile = window.TouchEvent && e instanceof TouchEvent;
+    if (
+      (this.isDragging && this.allowPanning) ||
+      (!isMobile && (e as MouseEvent).buttons === 2 && e.which === 3) ||
+      (isMobile && e.touches.length === 1 && !this.isTouch2)
+    ) {
       const deltaX = (e as MouseEvent).clientX - this.dragStartX;
       const deltaY = (e as MouseEvent).clientY - this.dragStartY;
       this.originX = this.scrollStartX - deltaX;
@@ -405,7 +414,6 @@ export default class CanvasSelect extends EventBus {
       this.evt = e;
       if (this.lock) return;
       const { mouseX, mouseY, mouseCX, mouseCY } = this.mergeEvent(e);
-      const isMobile = window.TouchEvent && e instanceof TouchEvent;
       const offsetX =
         Math.round(mouseX / this.scale) + this.originX / this.scale;
       const offsetY =
