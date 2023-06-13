@@ -134,6 +134,9 @@ export default class CanvasSelect extends EventBus {
 
   ScrollTop = 0;
 
+  scrollStartX = 0;
+  scrollStartY = 0;
+
   /**
    * @param el Valid CSS selector string, or DOM
    * @param src image src
@@ -270,6 +273,8 @@ export default class CanvasSelect extends EventBus {
       this.isDragging = true;
       this.dragStartX = (e as MouseEvent).clientX;
       this.dragStartY = (e as MouseEvent).clientY;
+      this.scrollStartX = this.canvas.parentElement.scrollLeft;
+      this.scrollStartY = this.canvas.parentElement.scrollTop;
     }
 
     this.evt = e;
@@ -380,18 +385,22 @@ export default class CanvasSelect extends EventBus {
             this.dataset.sort((a, b) => a.index - b.index);
           }
         }
-        this.update();
+        if (!this.isDragging) {
+          this.update();
+        }
       }
     }
   }
   handelMouseMove(e: MouseEvent | TouchEvent) {
     e.stopPropagation();
     if (this.isDragging && this.allowPanning) {
-      this.originX += (e as MouseEvent).clientX - this.dragStartX;
-      this.originY += (e as MouseEvent).clientY - this.dragStartY;
-      this.dragStartX = (e as MouseEvent).clientX;
-      this.dragStartY = (e as MouseEvent).clientY;
-      this.update();
+      const deltaX = (e as MouseEvent).clientX - this.dragStartX;
+      const deltaY = (e as MouseEvent).clientY - this.dragStartY;
+      this.originX = this.scrollStartX - deltaX;
+      this.originY = this.scrollStartY - deltaY;
+
+      this.canvas.parentElement.scrollLeft = this.originX;
+      this.canvas.parentElement.scrollTop = this.originY;
     } else {
       this.evt = e;
       if (this.lock) return;
@@ -558,8 +567,6 @@ export default class CanvasSelect extends EventBus {
     // Temp Code
     if (this.allowPanning) {
       this.isDragging = false;
-      this.originX += (e as MouseEvent).clientX - this.dragStartX;
-      this.originY += (e as MouseEvent).clientY - this.dragStartY;
     }
 
     this.evt = e;
