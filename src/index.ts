@@ -137,7 +137,7 @@ export default class CanvasSelect extends EventBus {
   scrollStartX = 0;
   scrollStartY = 0;
 
-  rightClickMoveEvent: any = false; 
+  rightClickMoveEvent: any = true; 
 
   /**
    * @param el Valid CSS selector string, or DOM

@@ -4,6 +4,7 @@
 
 # What's New?
 
+> Added annotate functionality on right click of mouse.
 > Now user can scroll top to bottom and left to right (Key: shift + mousewheel) and also zoom-in/out using key: ctrl + mousewheel.
 > Improved zoom with panning.
 > Added scrollbar to scroll page after zoom.
@@ -101,3 +102,8 @@ Call update method`instance.update()`for updating annotation list
 ## Delete Annotate Data
 
 For deleting annotate data with shortcut you need to pass key code in `instance.RemoveSelectionOnKey="Backspace"`.
+
+## Right Click Annotation
+
+Set setRightClickMoveEvent to false to enable annotation on right click. By default it's set to `true`.
+`this.instance.setRightClickMoveEvent = false`
