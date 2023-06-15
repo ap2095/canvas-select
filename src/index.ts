@@ -137,6 +137,8 @@ export default class CanvasSelect extends EventBus {
   scrollStartX = 0;
   scrollStartY = 0;
 
+  rightClickMoveEvent: any = true; 
+
   /**
    * @param el Valid CSS selector string, or DOM
    * @param src image src
@@ -167,6 +169,10 @@ export default class CanvasSelect extends EventBus {
 
   set setDragging(value: boolean) {
     this.allowPanning = value;
+  }
+
+  set setRightClickMoveEvent(value: boolean) {
+    this.rightClickMoveEvent = value;
   }
 
   get activeShape() {
@@ -272,8 +278,9 @@ export default class CanvasSelect extends EventBus {
     const isMobile = window.TouchEvent && e instanceof TouchEvent;
     if (
       this.allowPanning ||
-      (!isMobile && (e as MouseEvent).buttons === 2 && e.which === 3) ||
-      (isMobile && e.touches.length === 1 && !this.isTouch2)
+      (((!isMobile && (e as MouseEvent).buttons === 2 && e.which === 3) ||
+      (isMobile && e.touches.length === 1 && !this.isTouch2))
+      && this.rightClickMoveEvent)
     ) {
       this.isDragging = true;
       this.dragStartX = (e as MouseEvent).clientX;
@@ -293,8 +300,11 @@ export default class CanvasSelect extends EventBus {
         : [mouseX, mouseY];
     this.remmberOrigin = [mouseX - this.originX, mouseY - this.originY];
     if (
-      (!isMobile && (e as MouseEvent).buttons === 1) ||
-      (isMobile && e.touches.length === 1)
+      ((!isMobile && (e as MouseEvent).buttons === 1) ||
+      (isMobile && e.touches.length === 1)) || 
+      (((!isMobile && (e as MouseEvent).buttons === 2) ||
+      (isMobile && e.touches.length === 2))
+      && !this.rightClickMoveEvent)
     ) {
       // 鼠标左键
       const ctrls = this.activeShape.ctrlsData || [];
@@ -400,8 +410,9 @@ export default class CanvasSelect extends EventBus {
     const isMobile = window.TouchEvent && e instanceof TouchEvent;
     if (
       (this.isDragging && this.allowPanning) ||
-      (!isMobile && (e as MouseEvent).buttons === 2 && e.which === 3) ||
-      (isMobile && e.touches.length === 1 && !this.isTouch2)
+      (((!isMobile && (e as MouseEvent).buttons === 2 && e.which === 3) ||
+      (isMobile && e.touches.length === 1 && !this.isTouch2))
+      && this.rightClickMoveEvent)
     ) {
       const deltaX = (e as MouseEvent).clientX - this.dragStartX;
       const deltaY = (e as MouseEvent).clientY - this.dragStartY;
@@ -424,8 +435,11 @@ export default class CanvasSelect extends EventBus {
           : [mouseX, mouseY];
 
       if (
-        ((!isMobile && (e as MouseEvent).buttons === 1) ||
-          (isMobile && e.touches.length === 1)) &&
+        (((!isMobile && (e as MouseEvent).buttons === 1) ||
+        (isMobile && e.touches.length === 1))) ||
+        (((!isMobile && (e as MouseEvent).buttons === 2) ||
+        (isMobile && e.touches.length === 2))
+        && !this.rightClickMoveEvent) &&
         this.activeShape.type
       ) {
         if (
