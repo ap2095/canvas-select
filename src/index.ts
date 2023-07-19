@@ -478,6 +478,8 @@ export default class CanvasSelect extends EventBus {
                 ];
                 break;
               case 1:
+              case 7:
+              case 8:
                 coor = [
                   [x0, offsetY - y],
                   [x1, y1],
@@ -511,12 +513,6 @@ export default class CanvasSelect extends EventBus {
                 coor = [
                   [offsetX - x, y0],
                   [x1, offsetY - y],
-                ];
-                break;
-              case 7:
-                coor = [
-                  [offsetX - x, y0],
-                  [x1, y1],
                 ];
                 break;
               default:
@@ -576,8 +572,7 @@ export default class CanvasSelect extends EventBus {
             this.activeShape.radius = r;
           } else if (
             this.activeShape.type === 7 ||
-            this.activeShape.type === 8 ||
-            this.activeShape.type === 9
+            this.activeShape.type === 8
           ) {
             this.activeShape.coor.splice(1, 1, [x, y]);
           }
@@ -659,11 +654,7 @@ export default class CanvasSelect extends EventBus {
             this.activeShape.creating = false;
             this.emit("add", this.activeShape);
           }
-        } else if (
-          this.activeShape.type === 7 ||
-          this.activeShape.type === 8 ||
-          this.activeShape.type === 9
-        ) {
+        } else if (this.activeShape.type === 7 || this.activeShape.type === 8) {
           const [[x0, y0], [x1, y1]] = this.activeShape.coor;
           if (
             Math.abs(x0 - x1) < this.MIN_WIDTH ||
@@ -1022,6 +1013,8 @@ export default class CanvasSelect extends EventBus {
           let shape: AllShape;
           switch (item.type) {
             case 1:
+            case 7:
+            case 8:
               shape = new Rect(item, index);
               break;
             case 2:
@@ -1080,7 +1073,14 @@ export default class CanvasSelect extends EventBus {
         (shape.type === 2 &&
           this.isPointInPolygon(mousePoint, (shape as Polygon).coor)) ||
         ((shape.type === 4 || shape.type === 6) &&
-          this.isPointInLine(mousePoint, (shape as Line | Connectivity).coor))
+          this.isPointInLine(
+            mousePoint,
+            (shape as Line | Connectivity).coor
+          )) ||
+        (shape.type === 7 &&
+          this.isPointInRect(mousePoint, (shape as Rect).coor)) ||
+        (shape.type === 8 &&
+          this.isPointInRect(mousePoint, (shape as Rect).coor))
       ) {
         // if (this.focusMode && !shape.active) continue;
         hitShapeIndex = i;
@@ -1542,7 +1542,7 @@ Determines if a given circle intersects with a line segment defined by two point
         }
       }
       if (
-        [1, 2, 4, 5, 6].includes(this.activeShape.type) &&
+        [1, 2, 4, 5, 6, 7, 8].includes(this.activeShape.type) &&
         !this.activeShape.hide
       ) {
         this.drawCtrlList(this.activeShape);
