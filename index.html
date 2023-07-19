@@ -57,6 +57,8 @@
           <button onclick="change(4)">create polyline</button>
           <button onclick="change(5)">create circle</button>
           <button onclick="change(6)">create connectivity</button>
+          <button onclick="change(7)">extract Key</button>
+          <button onclick="change(8)">extract Value</button>
           <button onclick="change(0)">cancel creation</button>
           <br />
           <button onclick="zoom(true)">Zoom In</button>
@@ -280,6 +282,18 @@
       // 添加
       instance.on("add", (info) => {
         window.info = info;
+        if (info.type === 7) {
+          info["data"] = {
+            extractType: "key",
+          };
+          instance.keyRectangleConnectivity = info;
+        }
+        if (info.type === 8) {
+          info["data"] = {
+            extractType: "value",
+          };
+          instance.childRectangleConnectivity = info;
+        }
       });
       // 删除
       instance.on("delete", (info) => {});
