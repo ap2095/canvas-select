@@ -21,6 +21,7 @@ export default class Shape {
   public dragging: boolean = false;
   public index: number;
   public uuid: string = createUuid();
+  public data: any = {};
   constructor(item: ShapeProp, index: number) {
     this.index = index;
     Object.assign(this, item);

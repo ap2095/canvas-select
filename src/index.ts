@@ -126,6 +126,8 @@ export default class CanvasSelect extends EventBus {
 
   childRectangleConnectivity: Shape = null;
 
+  keyRectangleConnectivity: Shape = null;
+
   hideAnnotateLabels = false;
 
   LineWidth = 1.5;
@@ -137,7 +139,7 @@ export default class CanvasSelect extends EventBus {
   scrollStartX = 0;
   scrollStartY = 0;
 
-  rightClickMoveEvent: any = true; 
+  rightClickMoveEvent: any = true;
 
   /**
    * @param el Valid CSS selector string, or DOM
@@ -279,8 +281,8 @@ export default class CanvasSelect extends EventBus {
     if (
       this.allowPanning ||
       (((!isMobile && (e as MouseEvent).buttons === 2 && e.which === 3) ||
-      (isMobile && e.touches.length === 1 && !this.isTouch2))
-      && this.rightClickMoveEvent)
+        (isMobile && e.touches.length === 1 && !this.isTouch2)) &&
+        this.rightClickMoveEvent)
     ) {
       this.isDragging = true;
       this.dragStartX = (e as MouseEvent).clientX;
@@ -300,11 +302,11 @@ export default class CanvasSelect extends EventBus {
         : [mouseX, mouseY];
     this.remmberOrigin = [mouseX - this.originX, mouseY - this.originY];
     if (
-      ((!isMobile && (e as MouseEvent).buttons === 1) ||
-      (isMobile && e.touches.length === 1)) || 
+      (!isMobile && (e as MouseEvent).buttons === 1) ||
+      (isMobile && e.touches.length === 1) ||
       (((!isMobile && (e as MouseEvent).buttons === 2) ||
-      (isMobile && e.touches.length === 2))
-      && !this.rightClickMoveEvent)
+        (isMobile && e.touches.length === 2)) &&
+        !this.rightClickMoveEvent)
     ) {
       // 鼠标左键
       const ctrls = this.activeShape.ctrlsData || [];
@@ -366,6 +368,23 @@ export default class CanvasSelect extends EventBus {
               newShape.creating = true;
               this.parentRectangleConnectivity = this.findReactengle();
               break;
+            case 7:
+              newShape = new Rect(
+                { coor: [curPoint, curPoint] },
+                this.dataset.length
+              );
+              newShape.type = this.createType;
+              newShape.creating = true;
+              this.parentRectangleConnectivity = newShape;
+              break;
+            case 8:
+              newShape = new Rect(
+                { coor: [curPoint, curPoint] },
+                this.dataset.length
+              );
+              newShape.type = this.createType;
+              newShape.creating = true;
+              break;
             default:
               break;
           }
@@ -411,8 +430,8 @@ export default class CanvasSelect extends EventBus {
     if (
       (this.isDragging && this.allowPanning) ||
       (((!isMobile && (e as MouseEvent).buttons === 2 && e.which === 3) ||
-      (isMobile && e.touches.length === 1 && !this.isTouch2))
-      && this.rightClickMoveEvent)
+        (isMobile && e.touches.length === 1 && !this.isTouch2)) &&
+        this.rightClickMoveEvent)
     ) {
       const deltaX = (e as MouseEvent).clientX - this.dragStartX;
       const deltaY = (e as MouseEvent).clientY - this.dragStartY;
@@ -435,12 +454,12 @@ export default class CanvasSelect extends EventBus {
           : [mouseX, mouseY];
 
       if (
-        (((!isMobile && (e as MouseEvent).buttons === 1) ||
-        (isMobile && e.touches.length === 1))) ||
+        (!isMobile && (e as MouseEvent).buttons === 1) ||
+        (isMobile && e.touches.length === 1) ||
         (((!isMobile && (e as MouseEvent).buttons === 2) ||
-        (isMobile && e.touches.length === 2))
-        && !this.rightClickMoveEvent) &&
-        this.activeShape.type
+          (isMobile && e.touches.length === 2)) &&
+          !this.rightClickMoveEvent &&
+          this.activeShape.type)
       ) {
         if (
           this.ctrlIndex > -1 &&
@@ -555,6 +574,12 @@ export default class CanvasSelect extends EventBus {
             const [x0, y0] = this.activeShape.coor;
             const r = Math.sqrt((x0 - x) ** 2 + (y0 - y) ** 2);
             this.activeShape.radius = r;
+          } else if (
+            this.activeShape.type === 7 ||
+            this.activeShape.type === 8 ||
+            this.activeShape.type === 9
+          ) {
+            this.activeShape.coor.splice(1, 1, [x, y]);
           }
         }
         this.update();
@@ -633,6 +658,55 @@ export default class CanvasSelect extends EventBus {
           } else {
             this.activeShape.creating = false;
             this.emit("add", this.activeShape);
+          }
+        } else if (
+          this.activeShape.type === 7 ||
+          this.activeShape.type === 8 ||
+          this.activeShape.type === 9
+        ) {
+          const [[x0, y0], [x1, y1]] = this.activeShape.coor;
+          if (
+            Math.abs(x0 - x1) < this.MIN_WIDTH ||
+            Math.abs(y0 - y1) < this.MIN_HEIGHT
+          ) {
+            this.dataset.pop();
+            this.emit(
+              "warn",
+              `Width cannot be less than ${this.MIN_WIDTH},Height cannot be less than ${this.MIN_HEIGHT}`
+            );
+          } else {
+            this.activeShape.coor = [
+              [Math.min(x0, x1), Math.min(y0, y1)],
+              [Math.max(x0, x1), Math.max(y0, y1)],
+            ];
+            this.activeShape.creating = false;
+            this.emit("add", this.activeShape);
+          }
+
+          if (this.activeShape.type === 8) {
+            if (!this.activeShape.creating) {
+              const { mouseX, mouseY, mouseCX, mouseCY } = this.mergeEvent(e);
+              const offsetX =
+                Math.round(mouseX / this.scale) + this.originX / this.scale;
+              const offsetY =
+                Math.round(mouseY / this.scale) + this.originY / this.scale;
+              const nx = Math.round(offsetX - this.originX / this.scale);
+              const ny = Math.round(offsetY - this.originY / this.scale);
+              const curPoint: Point = [nx, ny];
+              let newShape = new Connectivity(
+                { coor: [curPoint] },
+                this.dataset.length
+              );
+              newShape.creating = true;
+
+              this.dataset.forEach((sp) => {
+                sp.active = false;
+              });
+              newShape.active = true;
+              this.dataset.push(newShape);
+              this.parentRectangleConnectivity = this.keyRectangleConnectivity;
+              this.createConnectivity();
+            }
           }
         }
         this.update();
@@ -715,7 +789,8 @@ export default class CanvasSelect extends EventBus {
     this.activeShape.creating = false;
 
     // Find the child rectangle connectivity by invoking 'findReactengle' method
-    this.childRectangleConnectivity = this.findReactengle();
+    if (this.activeShape.type === 6 && !this.childRectangleConnectivity)
+      this.childRectangleConnectivity = this.findReactengle();
 
     // Check if both parent and child rectangle connectivity exist and have different indices
     if (
@@ -1451,24 +1526,16 @@ Determines if a given circle intersects with a line segment defined by two point
             } else {
               this.drawLine(shape as Line | Connectivity);
             }
-            // if (
-            //   !this.activeShape.creating &&
-            //   this.parentRectangleConnectivity?.lineCoorIndex === shape.index &&
-            //   this.childRectangleConnectivity?.lineCoorIndex === shape.index
-            // ) {
-            //   let rect1: any = this.getDomRect(
-            //     this.parentRectangleConnectivity.coor
-            //   );
-            //   let rect2: any = this.getDomRect(
-            //     this.childRectangleConnectivity.coor
-            //   );
-            //   this.drawShortestLine(rect1, rect2, shape);
-            // } else {
-            //   this.drawLine(shape as Line | Connectivity);
-            // }
             break;
           case 5:
             this.drawCirle(shape as Circle);
+            break;
+          case 7:
+          case 9:
+            this.drawRect(shape as Rect);
+            break;
+          case 8:
+            this.drawRect(shape as Rect);
             break;
           default:
             break;
