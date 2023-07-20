@@ -128,6 +128,8 @@ export default class CanvasSelect extends EventBus {
 
   keyRectangleConnectivity: Shape = null;
 
+  valueRectangleConnectivity: Shape = null;
+
   hideAnnotateLabels = false;
 
   LineWidth = 1.5;
@@ -674,30 +676,27 @@ export default class CanvasSelect extends EventBus {
             this.emit("add", this.activeShape);
           }
 
+          if (this.activeShape.type === 7) {
+            this.childRectangleConnectivity = {
+              ...this.valueRectangleConnectivity,
+            };
+            this.valueRectangleConnectivity = null;
+            if (
+              this.childRectangleConnectivity &&
+              this.childRectangleConnectivity.type === 8
+            )
+              this.keyValueConnectivity(e);
+          }
           if (this.activeShape.type === 8) {
-            if (!this.activeShape.creating) {
-              const { mouseX, mouseY, mouseCX, mouseCY } = this.mergeEvent(e);
-              const offsetX =
-                Math.round(mouseX / this.scale) + this.originX / this.scale;
-              const offsetY =
-                Math.round(mouseY / this.scale) + this.originY / this.scale;
-              const nx = Math.round(offsetX - this.originX / this.scale);
-              const ny = Math.round(offsetY - this.originY / this.scale);
-              const curPoint: Point = [nx, ny];
-              let newShape = new Connectivity(
-                { coor: [curPoint] },
-                this.dataset.length
-              );
-              newShape.creating = true;
-
-              this.dataset.forEach((sp) => {
-                sp.active = false;
-              });
-              newShape.active = true;
-              this.dataset.push(newShape);
-              this.parentRectangleConnectivity = this.keyRectangleConnectivity;
-              this.createConnectivity();
-            }
+            this.parentRectangleConnectivity = {
+              ...this.keyRectangleConnectivity,
+            };
+            this.keyRectangleConnectivity = null;
+            if (
+              this.parentRectangleConnectivity &&
+              this.parentRectangleConnectivity.type === 7
+            )
+              this.keyValueConnectivity(e);
           }
         }
         this.update();
@@ -736,6 +735,32 @@ export default class CanvasSelect extends EventBus {
       } else if (e.key === this.RemoveSelectionOnKey) {
         this.deleteByIndex(this.activeShape.index);
       }
+    }
+  }
+
+  private keyValueConnectivity(e: MouseEvent | TouchEvent) {
+    if (!this.activeShape.creating) {
+      const { mouseX, mouseY, mouseCX, mouseCY } = this.mergeEvent(e);
+      const offsetX =
+        Math.round(mouseX / this.scale) + this.originX / this.scale;
+      const offsetY =
+        Math.round(mouseY / this.scale) + this.originY / this.scale;
+      const nx = Math.round(offsetX - this.originX / this.scale);
+      const ny = Math.round(offsetY - this.originY / this.scale);
+      const curPoint: Point = [nx, ny];
+      let newShape = new Connectivity(
+        { coor: [curPoint] },
+        this.dataset.length
+      );
+      newShape.creating = true;
+
+      this.dataset.forEach((sp) => {
+        sp.active = false;
+      });
+      newShape.active = true;
+      this.dataset.push(newShape);
+
+      this.createConnectivity();
     }
   }
 
@@ -1523,6 +1548,8 @@ Determines if a given circle intersects with a line segment defined by two point
                 this.childRectangleConnectivity.coor
               );
               this.drawShortestLine(rect1, rect2, shape);
+              this.parentRectangleConnectivity = null;
+              this.childRectangleConnectivity = null;
             } else {
               this.drawLine(shape as Line | Connectivity);
             }

@@ -286,13 +286,15 @@
           info["data"] = {
             extractType: "key",
           };
-          instance.keyRectangleConnectivity = info;
+          instance.keyRectangleConnectivity =
+            instance.parentRectangleConnectivity = info;
         }
         if (info.type === 8) {
           info["data"] = {
             extractType: "value",
           };
-          instance.childRectangleConnectivity = info;
+          instance.valueRectangleConnectivity =
+            instance.childRectangleConnectivity = info;
         }
       });
       // 删除
