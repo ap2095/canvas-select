@@ -680,10 +680,9 @@ export default class CanvasSelect extends EventBus {
             this.childRectangleConnectivity = {
               ...this.valueRectangleConnectivity,
             };
-            this.valueRectangleConnectivity = null;
             if (
-              this.childRectangleConnectivity &&
-              this.childRectangleConnectivity.type === 8
+              this.valueRectangleConnectivity &&
+              this.valueRectangleConnectivity.type === 8
             )
               this.keyValueConnectivity(e);
           }
@@ -691,10 +690,9 @@ export default class CanvasSelect extends EventBus {
             this.parentRectangleConnectivity = {
               ...this.keyRectangleConnectivity,
             };
-            this.keyRectangleConnectivity = null;
             if (
-              this.parentRectangleConnectivity &&
-              this.parentRectangleConnectivity.type === 7
+              this.keyRectangleConnectivity &&
+              this.keyRectangleConnectivity.type === 7
             )
               this.keyValueConnectivity(e);
           }
@@ -739,6 +737,8 @@ export default class CanvasSelect extends EventBus {
   }
 
   private keyValueConnectivity(e: MouseEvent | TouchEvent) {
+    this.valueRectangleConnectivity = null;
+    this.keyRectangleConnectivity = null;
     if (!this.activeShape.creating) {
       const { mouseX, mouseY, mouseCX, mouseCY } = this.mergeEvent(e);
       const offsetX =
@@ -1389,6 +1389,8 @@ Determines if a given circle intersects with a line segment defined by two point
    * @param shape 标注实例
    */
   drawLine(shape: Line | Connectivity) {
+    this.parentRectangleConnectivity = null;
+    this.childRectangleConnectivity = null;
     const { strokeStyle, active, creating, coor } = shape;
     this.ctx.save();
     this.ctx.lineWidth = this.LineWidth;
@@ -1548,8 +1550,6 @@ Determines if a given circle intersects with a line segment defined by two point
                 this.childRectangleConnectivity.coor
               );
               this.drawShortestLine(rect1, rect2, shape);
-              this.parentRectangleConnectivity = null;
-              this.childRectangleConnectivity = null;
             } else {
               this.drawLine(shape as Line | Connectivity);
             }
