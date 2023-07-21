@@ -1038,8 +1038,6 @@ export default class CanvasSelect extends EventBus {
           let shape: AllShape;
           switch (item.type) {
             case 1:
-            case 7:
-            case 8:
               shape = new Rect(item, index);
               break;
             case 2:
@@ -1056,6 +1054,11 @@ export default class CanvasSelect extends EventBus {
               break;
             case 6:
               shape = new Connectivity(item, index);
+              break;
+            case 7:
+            case 8:
+              shape = new Rect(item, index);
+              shape.type = item.type;
               break;
             default:
               console.warn("Invalid shape", item);
