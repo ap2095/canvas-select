@@ -1543,13 +1543,18 @@ Determines if a given circle intersects with a line segment defined by two point
                 (i) => i.index === shape.rectangleConnectivity[0][1]
               );
 
-              let rect1: any = this.getDomRect(
-                this.parentRectangleConnectivity.coor
-              );
-              let rect2: any = this.getDomRect(
-                this.childRectangleConnectivity.coor
-              );
-              this.drawShortestLine(rect1, rect2, shape);
+              if (
+                this.parentRectangleConnectivity &&
+                this.childRectangleConnectivity
+              ) {
+                let rect1: any = this.getDomRect(
+                  this.parentRectangleConnectivity.coor
+                );
+                let rect2: any = this.getDomRect(
+                  this.childRectangleConnectivity.coor
+                );
+                this.drawShortestLine(rect1, rect2, shape);
+              }
             } else {
               this.drawLine(shape as Line | Connectivity);
             }
