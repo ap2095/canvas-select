@@ -1061,7 +1061,7 @@ export default class CanvasSelect extends EventBus {
               console.warn("Invalid shape", item);
               break;
           }
-          [1, 2, 3, 4, 5, 6].includes(item.type) && initdata.push(shape);
+          [1, 2, 3, 4, 5, 6, 7, 8].includes(item.type) && initdata.push(shape);
         } else {
           console.warn("Shape must be an enumerable Object.", item);
         }
