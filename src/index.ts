@@ -329,6 +329,7 @@ export default class CanvasSelect extends EventBus {
               const nx = Math.round(offsetX - this.originX / this.scale);
               const ny = Math.round(offsetY - this.originY / this.scale);
               this.activeShape.coor.push([nx, ny]);
+              this.childRectangleConnectivity = null;
               if (this.activeShape.type === 6) this.createConnectivity();
             }
           }
@@ -1392,8 +1393,6 @@ Determines if a given circle intersects with a line segment defined by two point
    * @param shape 标注实例
    */
   drawLine(shape: Line | Connectivity) {
-    this.parentRectangleConnectivity = null;
-    this.childRectangleConnectivity = null;
     const { strokeStyle, active, creating, coor } = shape;
     this.ctx.save();
     this.ctx.lineWidth = this.LineWidth;
