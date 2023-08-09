@@ -279,6 +279,8 @@
         instance.setData(option);
       });
       instance.on("warn", (msg) => {});
+      // Get updated rectangle records
+      instance.on("updatedRect", (info) => {});
       // 添加
       instance.on("add", (info) => {
         window.info = info;

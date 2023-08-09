@@ -470,7 +470,7 @@ export default class CanvasSelect extends EventBus {
         ) {
           const [[x, y]] = this.remmber;
           // resize矩形
-          if (this.activeShape.type === 1) {
+          if ([1, 7, 8].includes(this.activeShape.type)) {
             const [[x0, y0], [x1, y1]] = this.activeShape.coor;
             let coor: Point[] = [];
             switch (this.ctrlIndex) {
@@ -699,6 +699,12 @@ export default class CanvasSelect extends EventBus {
           }
         }
         this.update();
+      }
+      if (
+        [1, 7, 8].includes(this.activeShape.type) &&
+        this.activeShape.active
+      ) {
+        this.emit("updatedRect", this.activeShape);
       }
     }
 
