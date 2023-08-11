@@ -22,6 +22,7 @@ export default class Shape {
   public index: number;
   public uuid: string = createUuid();
   public data: any = {};
+  public previousCoor: any[] = [];
   constructor(item: ShapeProp, index: number) {
     this.index = index;
     Object.assign(this, item);

@@ -704,6 +704,18 @@ export default class CanvasSelect extends EventBus {
         [1, 7, 8].includes(this.activeShape.type) &&
         this.activeShape.active
       ) {
+        if (this.activeShape.previousCoor?.length > 0) {
+          const [[x0, y0], [x1, y1]] = this.activeShape.coor;
+          const [[a0, b0], [a1, b1]] = this.activeShape.previousCoor;
+
+          if (
+            Math.abs(x1 - x0) === Math.abs(a1 - a0) &&
+            Math.abs(y1 - y0) === Math.abs(b1 - b0)
+          ) {
+            return;
+          }
+        }
+        this.activeShape.previousCoor = this.activeShape.coor;
         this.emit("updatedRect", this.activeShape);
       }
     }
