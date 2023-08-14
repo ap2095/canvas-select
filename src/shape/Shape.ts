@@ -24,6 +24,7 @@ export default class Shape {
   public data: any = {};
   public previousCoor: any[] = [];
   constructor(item: ShapeProp, index: number) {
+    item.index = index;
     this.index = index;
     Object.assign(this, item);
   }
