@@ -54,15 +54,19 @@ export default class CanvasSelect extends EventBus {
 
   HEIGHT = 0;
 
-  canvas: HTMLCanvasElement;
+  // // // // canvas: HTMLCanvasElement;
+  canvas: any;
 
-  ctx: CanvasRenderingContext2D;
+  canvasParentNode: HTMLElement;
+
+  // // // // ctx: CanvasRenderingContext2D;
 
   dataset: Array<AllShape> = [];
 
-  offScreen: HTMLCanvasElement;
+  // // // // offScreen: HTMLCanvasElement;
+  offScreen: any;
 
-  offScreenCtx: CanvasRenderingContext2D;
+  // // // // offScreenCtx: CanvasRenderingContext2D;
 
   remmber: number[][]; // 记录锚点距离
 
@@ -94,7 +98,7 @@ export default class CanvasSelect extends EventBus {
 
   scrollZoom = true; // 滚动缩放
 
-  timer: NodeJS.Timer;
+  timer: NodeJS.Timeout;
 
   dblTouch = 300; // 最小touch双击时间
 
@@ -143,6 +147,22 @@ export default class CanvasSelect extends EventBus {
 
   rightClickMoveEvent: any = true;
 
+  // startPoint = { x: 0, y: 0 };
+  // lineObj: any;
+  // endPoint: any = { x: 0, y: 0 };
+
+  lineObj: any;
+  startPoint: { x: any; y: any } | null = null;
+  endPoint: { x: any; y: any } | null = null;
+  fabricObjList: any[] = [];
+  activeRect: any = null;
+
+  rectangle: any;
+
+  isDrawing = false;
+  orgWidth = 0;
+  orgHeight = 0;
+
   /**
    * @param el Valid CSS selector string, or DOM
    * @param src image src
@@ -153,16 +173,38 @@ export default class CanvasSelect extends EventBus {
     this.handleContextmenu = this.handleContextmenu.bind(this);
     this.handleMousewheel = this.handleMousewheel.bind(this);
     this.handleScroll = this.handleScroll.bind(this);
-    this.handleMouseDown = this.handleMouseDown.bind(this);
-    this.handelMouseMove = this.handelMouseMove.bind(this);
-    this.handelMouseUp = this.handelMouseUp.bind(this);
+    this.handleMouseDownR = this.handleMouseDownR.bind(this);
+    this.handelMouseMoveR = this.handelMouseMoveR.bind(this);
+    this.handelMouseUpR = this.handelMouseUpR.bind(this);
     this.handelLeave = this.handelLeave.bind(this);
     this.handelDblclick = this.handelDblclick.bind(this);
     this.handelKeyup = this.handelKeyup.bind(this);
+    this.handelObjectMove = this.handelObjectMove.bind(this);
     const container = typeof el === "string" ? document.querySelector(el) : el;
     if (container instanceof HTMLCanvasElement) {
-      this.canvas = container;
-      this.offScreen = document.createElement("canvas");
+      this.canvasParentNode = container.parentElement as HTMLElement;
+      console.log("1234", container);
+      // container.width = this.canvasParentNode.clientWidth; // this.canvasParentNode.clientWidth;
+      // container.height = this.canvasParentNode.clientHeight; //this.canvasParentNode.clientHeight;
+      this.canvas = new (window as any).fabric.Canvas(container);
+      this.orgWidth = this.canvasParentNode.clientWidth; //this.canvas.wrapperEl.offsetWidth;
+      this.orgHeight = this.canvasParentNode.clientHeight; //this.canvas.wrapperEl.offsetHeight;
+      console.log("1233", this.canvas);
+      this.canvas.setDimensions({
+        width: this.orgWidth,
+        height: this.orgHeight,
+      });
+      // // // // this.canvas = container;
+      // this.canvasParentNode = this.canvas.getElement()
+      //   .parentNode as HTMLElement;
+      // this.canvasParentNode = this.canvas.getElement()
+      //   .parentNode as HTMLElement;
+      // this.canvas.wrapperEl.width = this.orgWidth; // this.canvasParentNode.clientWidth;
+      // this.canvas.wrapperEl.height = this.orgHeight; //this.canvasParentNode.clientHeight;
+      // // // // this.offScreen = document.createElement("canvas");
+      // this.offScreen = new (window as any).fabric.Canvas(
+      //   document.createElement("canvas")
+      // );
       this.initSetting();
       this.initEvents();
       src && this.setImage(src);
@@ -227,8 +269,8 @@ export default class CanvasSelect extends EventBus {
       }
       isMobile = true;
     } else {
-      mouseX = (e as MouseEvent).offsetX;
-      mouseY = (e as MouseEvent).offsetY;
+      mouseX = (e as any).e.offsetX;
+      mouseY = (e as any).e.offsetY;
     }
     return { ...e, mouseX, mouseY, mouseCX, mouseCY, isMobile };
   }
@@ -244,7 +286,7 @@ export default class CanvasSelect extends EventBus {
   @param {Event} e - The event object associated with the "leave" event.
   */
   handelLeave(e: any) {
-    e.preventDefault();
+    // // // // e.preventDefault();
     this.isDragging = false;
   }
   handleScroll(e: any) {
@@ -252,7 +294,7 @@ export default class CanvasSelect extends EventBus {
     this.originY = e.target.scrollTop * -1;
   }
   handleContextmenu(e: MouseEvent) {
-    e.preventDefault();
+    // // // // e.preventDefault();
     this.evt = e;
     if (this.lock) return;
   }
@@ -261,12 +303,12 @@ export default class CanvasSelect extends EventBus {
    * @param e The WheelEvent object representing the mousewheel event.
    * @returns void
    */
-  handleMousewheel(e: WheelEvent) {
+  handleMousewheel(e: any) {
     // Check if the lock flag is true, scrollZoom is disabled, or the Ctrl key is not pressed, and return early
-    if (this.lock || !this.scrollZoom || !e.ctrlKey) return;
+    if (this.lock || !this.scrollZoom || !e.e.ctrlKey) return;
 
-    e.preventDefault();
-    e.stopPropagation();
+    e.e.preventDefault();
+    e.e.stopPropagation();
 
     // Retrieve the mouse coordinates relative to the component using the mergeEvent function
     const { mouseX, mouseY } = this.mergeEvent(e);
@@ -275,22 +317,24 @@ export default class CanvasSelect extends EventBus {
     this.mouse = [mouseX, mouseY];
 
     // Set the scale based on the direction of the mousewheel scroll
-    this.setScale(e.deltaY < 0);
+    this.setScale(e.e.deltaY < 0);
   }
   handleMouseDown(e: MouseEvent | TouchEvent) {
-    e.stopPropagation();
+    // // // // e.stopPropagation();
     const isMobile = window.TouchEvent && e instanceof TouchEvent;
     if (
       this.allowPanning ||
-      (((!isMobile && (e as MouseEvent).buttons === 2 && e.which === 3) ||
+      (((!isMobile && (e as MouseEvent).button === 2 && e.which === 3) ||
         (isMobile && e.touches.length === 1 && !this.isTouch2)) &&
         this.rightClickMoveEvent)
     ) {
       this.isDragging = true;
       this.dragStartX = (e as MouseEvent).clientX;
       this.dragStartY = (e as MouseEvent).clientY;
-      this.scrollStartX = this.canvas.parentElement.scrollLeft;
-      this.scrollStartY = this.canvas.parentElement.scrollTop;
+      // // // // this.scrollStartX = this.canvas.parentElement.scrollLeft;
+      // // // // this.scrollStartY = this.canvas.parentElement.scrollTop;
+      this.scrollStartX = this.canvasParentNode.scrollLeft;
+      this.scrollStartY = this.canvasParentNode.scrollTop;
     }
 
     this.evt = e;
@@ -304,9 +348,9 @@ export default class CanvasSelect extends EventBus {
         : [mouseX, mouseY];
     this.remmberOrigin = [mouseX - this.originX, mouseY - this.originY];
     if (
-      (!isMobile && (e as MouseEvent).buttons === 1) ||
+      (!isMobile && (e as MouseEvent).button === 1) ||
       (isMobile && e.touches.length === 1) ||
-      (((!isMobile && (e as MouseEvent).buttons === 2) ||
+      (((!isMobile && (e as MouseEvent).button === 2) ||
         (isMobile && e.touches.length === 2)) &&
         !this.rightClickMoveEvent)
     ) {
@@ -428,11 +472,11 @@ export default class CanvasSelect extends EventBus {
     }
   }
   handelMouseMove(e: MouseEvent | TouchEvent) {
-    e.stopPropagation();
+    // // // // e.stopPropagation();
     const isMobile = window.TouchEvent && e instanceof TouchEvent;
     if (
       (this.isDragging && this.allowPanning) ||
-      (((!isMobile && (e as MouseEvent).buttons === 2 && e.which === 3) ||
+      (((!isMobile && (e as MouseEvent).button === 2 && e.which === 3) ||
         (isMobile && e.touches.length === 1 && !this.isTouch2)) &&
         this.rightClickMoveEvent)
     ) {
@@ -441,8 +485,10 @@ export default class CanvasSelect extends EventBus {
       this.originX = this.scrollStartX - deltaX;
       this.originY = this.scrollStartY - deltaY;
 
-      this.canvas.parentElement.scrollLeft = this.originX;
-      this.canvas.parentElement.scrollTop = this.originY;
+      // // // // this.canvas.parentElement.scrollLeft = this.originX;
+      // // // // this.canvas.parentElement.scrollTop = this.originY;
+      this.canvasParentNode.scrollLeft = this.originX;
+      this.canvasParentNode.scrollTop = this.originY;
     } else {
       this.evt = e;
       if (this.lock) return;
@@ -455,11 +501,10 @@ export default class CanvasSelect extends EventBus {
         isMobile && e.touches.length === 2
           ? [mouseCX, mouseCY]
           : [mouseX, mouseY];
-
       if (
-        (!isMobile && (e as MouseEvent).buttons === 1) ||
+        (!isMobile && (e as MouseEvent).button === 1) ||
         (isMobile && e.touches.length === 1) ||
-        (((!isMobile && (e as MouseEvent).buttons === 2) ||
+        (((!isMobile && (e as MouseEvent).button === 2) ||
           (isMobile && e.touches.length === 2)) &&
           !this.rightClickMoveEvent &&
           this.activeShape.type)
@@ -608,7 +653,7 @@ export default class CanvasSelect extends EventBus {
     }
   }
   handelMouseUp(e: MouseEvent | TouchEvent) {
-    e.stopPropagation();
+    // // // // e.stopPropagation();
     // Temp Code
     if (this.allowPanning) {
       this.isDragging = false;
@@ -723,7 +768,7 @@ export default class CanvasSelect extends EventBus {
     // END
   }
   handelDblclick(e: MouseEvent | TouchEvent) {
-    e.stopPropagation();
+    // // // // e.stopPropagation();
     this.evt = e;
     if (this.lock) return;
     if ([2, 4].includes(this.activeShape.type)) {
@@ -741,18 +786,47 @@ export default class CanvasSelect extends EventBus {
     e.stopPropagation();
     this.evt = e;
     if (this.lock || document.activeElement !== document.body) return;
-    if (this.activeShape.type) {
-      if ([2, 4, 6].includes(this.activeShape.type) && e.key === "Escape") {
-        if (this.activeShape.coor.length > 1 && this.activeShape.creating) {
-          this.activeShape.coor.pop();
-        } else {
-          this.deleteByIndex(this.activeShape.index);
+
+    const selectedObj = this.canvas.getActiveObject();
+    const indexes: number[] = [];
+    if (selectedObj) {
+      indexes.push(selectedObj.index);
+      if (
+        selectedObj?.connectedLines &&
+        selectedObj?.connectedLines?.length > 0
+      )
+        indexes.push(...selectedObj.connectedLines);
+      if (
+        selectedObj?.connectedRect &&
+        selectedObj?.connectedRect?.length > 0 &&
+        [7, 8].includes(selectedObj.type)
+      )
+        indexes.push(...selectedObj.connectedRect);
+
+      indexes.forEach((e) => {
+        const item = this.fabricObjList.find((ele) => ele.index === e);
+
+        if (item) {
+          this.canvas.remove(item);
+          this.fabricObjList = this.fabricObjList
+            .filter((ele) => ele.index !== e)
+            .map((ele) => ele);
         }
-        this.update();
-      } else if (e.key === this.RemoveSelectionOnKey) {
-        this.deleteByIndex(this.activeShape.index);
-      }
+      });
     }
+    this.canvas.renderAll();
+    // // // // if (this.activeShape.type) {
+    // // // //   if ([2, 4, 6].includes(this.activeShape.type) && e.key === "Escape") {
+    // // // //     if (this.activeShape.coor.length > 1 && this.activeShape.creating) {
+    // // // //       this.activeShape.coor.pop();
+    // // // //     } else {
+    // // // //       this.deleteByIndex(this.activeShape.index);
+    // // // //     }
+    // // // //     this.update();
+    // // // //   } else if (e.key === this.RemoveSelectionOnKey) {
+    // // // //     this.deleteByIndex(this.activeShape.index);
+    // // // //   }
+    // // // // }
   }
 
   private keyValueConnectivity(e: MouseEvent | TouchEvent) {
@@ -794,11 +868,19 @@ export default class CanvasSelect extends EventBus {
         const [[x0, y0], [x1, y1]] = (shape as Rect).coor.map((a) =>
           a.map((b: any) => b * this.scale)
         );
+        // // // // if (
+        // // // //   x0 + this.originX + this.canvas.parentElement.scrollLeft - 5 <= x &&
+        // // // //   x <= x1 + this.originX + this.canvas.parentElement.scrollLeft + 5 &&
+        // // // //   y0 + this.originY + this.canvas.parentElement.scrollTop - 5 <= y &&
+        // // // //   y <= y1 + this.originY + this.canvas.parentElement.scrollTop + 5
+        // // // // ) {
+        // // // //   return shape as Rect;
+        // // // // }
         if (
-          x0 + this.originX + this.canvas.parentElement.scrollLeft - 5 <= x &&
-          x <= x1 + this.originX + this.canvas.parentElement.scrollLeft + 5 &&
-          y0 + this.originY + this.canvas.parentElement.scrollTop - 5 <= y &&
-          y <= y1 + this.originY + this.canvas.parentElement.scrollTop + 5
+          x0 + this.originX + this.canvasParentNode.scrollLeft - 5 <= x &&
+          x <= x1 + this.originX + this.canvasParentNode.scrollLeft + 5 &&
+          y0 + this.originY + this.canvasParentNode.scrollTop - 5 <= y &&
+          y <= y1 + this.originY + this.canvasParentNode.scrollTop + 5
         ) {
           return shape as Rect;
         }
@@ -1004,46 +1086,525 @@ export default class CanvasSelect extends EventBus {
    */
   initSetting() {
     const dpr = window.devicePixelRatio || 1;
-    this.canvas.style.userSelect = "none";
-    this.ctx = this.ctx || this.canvas.getContext("2d", { alpha: this.alpha });
-    this.WIDTH = this.canvas.clientWidth;
-    this.HEIGHT = this.canvas.clientHeight;
-    this.canvas.width = this.WIDTH * dpr;
-    this.canvas.height = this.HEIGHT * dpr;
-    this.canvas.style.width = this.WIDTH + "px";
-    this.canvas.style.height = this.HEIGHT + "px";
-    this.offScreen.width = this.WIDTH;
-    this.offScreen.height = this.HEIGHT;
-    this.offScreenCtx =
-      this.offScreenCtx ||
-      this.offScreen.getContext("2d", { willReadFrequently: true });
-    this.ctx.scale(dpr, dpr);
+    // // // // this.canvas.style.userSelect = "none";
+    // this.canvas.getElement().style.userSelect = "none";
+    // // // // this.ctx = this.ctx || this.canvas.getContext("2d", { alpha: this.alpha });
+    // this.WIDTH = this.canvas.clientWidth;
+    // this.HEIGHT = this.canvas.clientHeight;
+    // this.WIDTH = this.canvas.getElement().clientWidth;
+    // this.HEIGHT = this.canvas.getElement().clientHeight;
+    // this.canvas.width = this.WIDTH * dpr;
+    // this.canvas.height = this.HEIGHT * dpr;
+    // // // // this.canvas.style.width = this.WIDTH + "px";
+    // // // // this.canvas.style.height = this.HEIGHT + "px";
+    // this.canvas.getElement().style.width = this.WIDTH + "px";
+    // this.canvas.getElement().style.height = this.HEIGHT + "px";
+    // this.offScreen.width = this.WIDTH;
+    // this.offScreen.height = this.HEIGHT;
+    // // // // this.offScreenCtx =
+    // // // //   this.offScreenCtx ||
+    // // // //   this.offScreen.getContext("2d", { willReadFrequently: true });
+    // // // // this.ctx.scale(dpr, dpr);
   }
   /**
    * 初始化事件
    */
   initEvents() {
     this.image.addEventListener("load", this.handleLoad);
-    this.canvas.addEventListener("touchstart", this.handleMouseDown);
-    this.canvas.addEventListener("touchmove", this.handelMouseMove);
-    this.canvas.addEventListener("touchend", this.handelMouseUp);
-    this.canvas.addEventListener("contextmenu", this.handleContextmenu);
-    this.canvas.addEventListener("mousewheel", this.handleMousewheel);
-    this.canvas.addEventListener("wheel", this.handleMousewheel);
-    this.canvas.addEventListener("mousedown", this.handleMouseDown);
-    this.canvas.addEventListener("mousemove", this.handelMouseMove);
-    this.canvas.addEventListener("mouseup", this.handelMouseUp);
-    this.canvas.addEventListener("mouseleave", this.handelLeave);
-    this.canvas.addEventListener("dblclick", this.handelDblclick);
+    // // // // this.canvas.addEventListener("touchstart", this.handleMouseDown);
+    // // // // this.canvas.addEventListener("touchmove", this.handelMouseMove);
+    // // // // this.canvas.addEventListener("touchend", this.handelMouseUp);
+    // // // // this.canvas.addEventListener("contextmenu", this.handleContextmenu);
+    // // // // this.canvas.addEventListener("mousewheel", this.handleMousewheel);
+    // // // // this.canvas.addEventListener("wheel", this.handleMousewheel);
+    // // // // this.canvas.addEventListener("mousedown", this.handleMouseDown);
+    // // // // this.canvas.addEventListener("mousemove", this.handelMouseMove);
+    // // // // this.canvas.addEventListener("mouseup", this.handelMouseUp);
+    // // // // this.canvas.addEventListener("mouseleave", this.handelLeave);
+    // // // // this.canvas.addEventListener("dblclick", this.handelDblclick);
+    // // // // document.body.addEventListener("keyup", this.handelKeyup);
+    this.canvas.on("touchstart", this.handleMouseDown as any);
+    this.canvas.on("touchmove", this.handelMouseMove as any);
+    this.canvas.on("touchend", this.handelMouseUp as any);
+    this.canvas.on("contextmenu", this.handleContextmenu as any);
+    this.canvas.on("mouse:wheel", this.handleMousewheel as any);
+    this.canvas.on("wheel", this.handleMousewheel as any);
+    this.canvas.on("mouse:down", this.handleMouseDownR as any);
+    this.canvas.on("mouse:move", this.handelMouseMoveR as any);
+    this.canvas.on("mouse:up", this.handelMouseUpR as any);
+    this.canvas.on("mouse:out", this.handelLeave);
+    this.canvas.on("mouse:dblclick", this.handelDblclick as any);
+    this.canvas.on("object:moving", this.handelObjectMove as any);
     document.body.addEventListener("keyup", this.handelKeyup);
-    this.canvas.parentElement.addEventListener("scroll", this.handleScroll);
+    // // // // this.canvas.parentElement.addEventListener("scroll", this.handleScroll);
+    this.canvasParentNode.addEventListener("scroll", this.handleScroll);
   }
+
+  handleMouseDownR(event: any) {
+    this.startPoint = this.canvas.getPointer(event.e);
+
+    if ([1, 7, 8].includes(this.createType)) {
+      this.isDrawing = true;
+      this.toggleSelection(true);
+      this.activeRect = this.createRectangle(
+        this.startPoint.x,
+        this.startPoint.y,
+        0,
+        0,
+        "transparent"
+      );
+
+      this.activeRect["type"] = this.createType;
+      this.activeRect.setControlsVisibility({ mtr: false });
+      this.activeRect["index"] = this.fabricObjList.length;
+      if (this.createType === 7)
+        this.parentRectangleConnectivity = this.activeRect;
+      if (this.createType === 8)
+        this.childRectangleConnectivity = this.activeRect;
+      this.canvas.add(this.activeRect);
+    } else if (this.createType === 6) {
+      this.toggleSelection(false);
+      if (!this.isDrawing) {
+        this.isDrawing = true;
+        this.startPoint = this.canvas.getPointer(event.e);
+      }
+      // else {
+      //   this.endPoint = this.canvas.getPointer(event.e);
+      //   this.connectRectangles(this.startPoint, this.endPoint);
+      // }
+    } else {
+      this.activeRect = this.canvas.getActiveObject();
+    }
+  }
+
+  handelMouseMoveR(event: any) {
+    if (this.isDrawing && [1, 7, 8].includes(this.createType)) {
+      const currentPoint = this.canvas.getPointer(event.e);
+      this.activeRect.set({
+        width: currentPoint.x - this.startPoint.x,
+        height: currentPoint.y - this.startPoint.y,
+      });
+      this.canvas.renderAll();
+    } else if (this.isDrawing && this.createType === 6) {
+      this.endPoint = this.canvas.getPointer(event.e);
+      if (this.lineObj) {
+        this.canvas.remove(this.lineObj);
+      }
+      this.lineObj = this.createConnector(this.startPoint, this.endPoint);
+      this.lineObj.setControlsVisibility({ mtr: false });
+      if (this.lineObj?.index) {
+        const findIndex = this.fabricObjList.findIndex((e) => e.index);
+        if (findIndex) this.fabricObjList[findIndex] = this.lineObj;
+      } else {
+        this.lineObj["index"] = this.fabricObjList.length;
+      }
+      this.canvas.add(this.lineObj);
+      this.canvas.renderAll();
+    } else if (!this.isDrawing && this.activeRect && this.createType === 0) {
+      this.endPoint = this.canvas.getPointer(event.e);
+      this.updateConnector(this.activeRect);
+    }
+  }
+
+  handelMouseUpR(event: any) {
+    console.log(this.fabricObjList);
+    if (
+      this.isDrawing &&
+      [1, 7, 8].includes(this.createType) &&
+      this.activeRect
+    ) {
+      this.isDrawing = false;
+      this.fabricObjList.push(this.activeRect);
+      this.activeRect = null;
+      if (
+        [7, 8].includes(this.createType) &&
+        this.parentRectangleConnectivity &&
+        this.childRectangleConnectivity
+      )
+        this.addReferenceAndConnectLine(
+          this.parentRectangleConnectivity,
+          this.childRectangleConnectivity
+        );
+    }
+    if (this.isDrawing && this.createType === 6 && this.lineObj) {
+      this.isDrawing = false;
+      const startPoint = {
+        x: this.lineObj.get("x1"),
+        y: this.lineObj.get("y1"),
+      };
+      const endPoint = { x: this.lineObj.get("x2"), y: this.lineObj.get("y2") };
+
+      const startRect = this.fabricObjList.find((rectangle) => {
+        if (rectangle.type === 1)
+          return this.isPointInsideRectangle(startPoint, rectangle);
+      });
+
+      const endRect = this.fabricObjList.find((rectangle) => {
+        if (rectangle.type === 1)
+          return this.isPointInsideRectangle(endPoint, rectangle);
+      });
+      this.addReferenceAndConnectLine(startRect, endRect);
+    }
+    if (this.createType === 0) {
+      this.activeRect = null;
+    }
+    this.toggleSelection(true);
+  }
+
+  addReferenceAndConnectLine(startRect: any, endRect: any) {
+    if (startRect && endRect && !this.isLineAlreadyDrawn(startRect, endRect)) {
+      if ([7, 8].includes(this.createType)) {
+        const centerRect1 = startRect.getCenterPoint();
+        const centerRect2 = endRect.getCenterPoint();
+
+        const angle = Math.atan2(
+          centerRect2.y - centerRect1.y,
+          centerRect2.x - centerRect1.x
+        );
+
+        const intersectionRect1 = this.getIntersection(startRect, angle);
+        const intersectionRect2 = this.getIntersection(
+          endRect,
+          angle + Math.PI
+        );
+
+        this.lineObj = this.createConnector(
+          intersectionRect1,
+          intersectionRect2
+        );
+        this.lineObj.selectable = false;
+        this.lineObj.setControlsVisibility({ mtr: false });
+        this.lineObj["index"] = this.fabricObjList.length;
+        this.lineObj["type"] = 6;
+        this.canvas.add(this.lineObj);
+        this.canvas.renderAll();
+      }
+      if (!this.lineObj) return;
+      if (!startRect?.connectedLines) startRect["connectedLines"] = [];
+      if (!endRect?.connectedLines) endRect["connectedLines"] = [];
+      if (!startRect?.connectedRect) startRect["connectedRect"] = [];
+      if (!endRect?.connectedRect) endRect["connectedRect"] = [];
+      startRect.connectedLines.push(this.lineObj.index);
+      endRect.connectedLines.push(this.lineObj.index);
+      startRect.connectedRect.push(endRect.index);
+      endRect.connectedRect.push(startRect.index);
+      this.lineObj.connectedRect = [startRect.index, endRect.index]; // Store connected rectangles
+      // Both start and end points are inside rectangles
+      this.updateConnectingLine([this.lineObj]);
+      this.fabricObjList.push(this.lineObj);
+    } else {
+      this.canvas.remove(this.lineObj);
+    }
+    this.lineObj = null;
+    this.createType = 0;
+    this.parentRectangleConnectivity = null;
+    this.childRectangleConnectivity = null;
+    this.removeUnconnectedLines();
+  }
+
+  isLineAlreadyDrawn(rectA: any, rectB: any) {
+    if (
+      rectA?.connectedLines?.some((e: number) =>
+        rectB.connectedLines?.includes(e)
+      )
+    )
+      return true;
+
+    return false;
+  }
+
+  isPointInsideRectangle(point: any, rectangle: any) {
+    const rectLeft = rectangle.left;
+    const rectTop = rectangle.top;
+    const rectRight = rectangle.left + rectangle.width;
+    const rectBottom = rectangle.top + rectangle.height;
+
+    return (
+      point.x >= rectLeft &&
+      point.x <= rectRight &&
+      point.y >= rectTop &&
+      point.y <= rectBottom
+    );
+  }
+
+  handelObjectMove(event: any) {
+    if (this.fabricObjList.includes(event.target)) {
+      this.updateConnectors(event.target);
+      // // // this.updateConnectedLines(event.target);
+    }
+  }
+
+  updateConnector(rect: any) {
+    const linesToUpdate: any[] = this.fabricObjList.filter((e) =>
+      rect?.connectedLines?.includes(e.index)
+    );
+    this.updateConnectingLine(linesToUpdate);
+    this.canvas.renderAll();
+  }
+
+  findNearestRectangle(rect: any) {
+    let nearestRect: any = null;
+    let minDistance = Infinity;
+    this.fabricObjList.forEach((otherRect) => {
+      if (otherRect !== rect) {
+        let distance = this.calculateDistance(rect, otherRect);
+        if (distance < minDistance) {
+          minDistance = distance;
+          nearestRect = otherRect;
+        }
+      }
+    });
+    return nearestRect;
+  }
+
+  calculateDistance(rectA: any, rectB: any) {
+    const centerA = rectA.getCenterPoint();
+    const centerB = rectB.getCenterPoint();
+    return Math.sqrt(
+      (centerB.x - centerA.x) ** 2 + (centerB.y - centerA.y) ** 2
+    );
+  }
+
+  createRectangle(left: any, top: any, width: any, height: any, fill: any) {
+    return new (window as any).fabric.Rect({
+      left: left,
+      top: top,
+      width: width,
+      height: height,
+      fill: fill,
+      hasBorders: true,
+      strokeWidth: 2,
+      stroke: "black",
+      strokeUniform: true,
+    });
+  }
+
+  connectRectangles(startPoint: any, endPoint: any) {
+    const startObject = this.getObjectUnderPoint(startPoint);
+    const endObject = this.getObjectUnderPoint(endPoint);
+    if (
+      startObject &&
+      endObject &&
+      startObject !== endObject &&
+      !this.areRectanglesConnected(startObject, endObject)
+    ) {
+      const nearestPointA = this.getNearestBorderPoint(
+        startObject,
+        endObject,
+        startPoint
+      );
+      const nearestPointB = this.getNearestBorderPoint(
+        endObject,
+        startObject,
+        endPoint
+      );
+
+      this.canvas.renderAll();
+    }
+  }
+
+  areRectanglesConnected(rectA: any, rectB: any) {
+    for (const connector of this.fabricObjList) {
+      if (
+        connector?.connectedRect?.includes(rectA) &&
+        connector?.connectedRect?.includes(rectB)
+      ) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  removeUnconnectedLines() {
+    const linesToRemove: any[] = [];
+
+    this.fabricObjList.forEach((connector) => {
+      if (connector?.connectedRect?.length < 2 && connector.type === 6) {
+        linesToRemove.push(connector);
+      }
+    });
+
+    linesToRemove.forEach((connector) => {
+      this.canvas.remove(connector);
+      this.fabricObjList.splice(this.fabricObjList.indexOf(connector), 1);
+    });
+  }
+
+  getCenterPoint(rectangle: any) {
+    const rectLeft = rectangle.left;
+    const rectTop = rectangle.top;
+    const rectWidth = rectangle.width;
+    const rectHeight = rectangle.height;
+
+    const centerX = rectLeft + rectWidth / 2;
+    const centerY = rectTop + rectHeight / 2;
+
+    return { x: centerX, y: centerY };
+  }
+
+  getObjectUnderPoint(point: any) {
+    let objects = this.canvas.getObjects();
+    for (let i = objects.length - 1; i >= 0; i--) {
+      if (objects[i].containsPoint(point)) {
+        return objects[i];
+      }
+    }
+    return null;
+  }
+
+  updateConnectors(movedRect: any) {
+    const linesToUpdate: any[] = this.fabricObjList.filter((e) =>
+      movedRect?.connectedLines?.includes(e.index)
+    );
+    this.updateConnectingLine(linesToUpdate);
+  }
+
+  updateConnectingLine(linesToUpdate: any[]) {
+    linesToUpdate.forEach((line) => {
+      const rect1 = this.fabricObjList.find(
+        (e) => e.index === line.connectedRect[0]
+      );
+      const rect2 = this.fabricObjList.find(
+        (e) => e.index === line.connectedRect[1]
+      );
+
+      const centerRect1 = rect1.getCenterPoint();
+      const centerRect2 = rect2.getCenterPoint();
+
+      const angle = Math.atan2(
+        centerRect2.y - centerRect1.y,
+        centerRect2.x - centerRect1.x
+      );
+
+      const intersectionRect1 = this.getIntersection(rect1, angle);
+      const intersectionRect2 = this.getIntersection(rect2, angle + Math.PI);
+
+      line.set({
+        x1: intersectionRect1.x,
+        y1: intersectionRect1.y,
+        x2: intersectionRect2.x,
+        y2: intersectionRect2.y,
+      });
+    });
+  }
+
+  // Function to calculate the nearest border point
+  getNearestBorderPoint(rectA: any, rectB: any, point: { x: any; y: any }) {
+    const centerRect1 = rectA.getCenterPoint();
+    const centerRect2 = rectB.getCenterPoint();
+
+    // Calculate angle between centers
+    const angle = Math.atan2(
+      centerRect2.y - centerRect1.y,
+      centerRect2.x - centerRect1.x
+    );
+
+    // Get intersection points on rectangles' borders
+    const intersectionRect1 = this.getIntersection(rectA, angle);
+    const intersectionRect2 = this.getIntersection(rectB, angle + Math.PI);
+
+    return { intersectionRect1, intersectionRect2 };
+
+    // this.lineObj = this.createConnector(intersectionRect1, intersectionRect2);
+
+    // this.canvas.add(this.lineObj);
+    // this.canvas.renderAll();
+
+    // // // // if (nearestRect) {
+    // // // //   // Draw line and adjust endpoints
+    // // // //   const line = new fabric.Line(
+    // // // //     [currentRect.left, currentRect.top, nearestRect.left, nearestRect.top],
+    // // // //     {
+    // // // //       stroke: 'black',
+    // // // //       strokeWidth: 2,
+    // // // //     }
+    // // // //   );
+
+    // // // //   canvas.add(line);
+    // // // // }
+    // }
+    // // // // let boundsB = rectB.getBoundingRect();
+
+    // // // // let nearestPoint = new (window as any).fabric.Point(point.x, point.y);
+
+    // // // // if (point.x < boundsB.left) {
+    // // // //   nearestPoint.x = boundsB.left;
+    // // // // } else if (point.x > boundsB.left + boundsB.width) {
+    // // // //   nearestPoint.x = boundsB.left + boundsB.width;
+    // // // // }
+
+    // // // // if (point.y < boundsB.top) {
+    // // // //   nearestPoint.y = boundsB.top;
+    // // // // } else if (point.y > boundsB.top + boundsB.height) {
+    // // // //   nearestPoint.y = boundsB.top + boundsB.height;
+    // // // // }
+
+    // // // // return nearestPoint;
+  }
+
+  getCenter(rect: any) {
+    return {
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2,
+    };
+  }
+
+  getIntersection(rect: any, angle: number) {
+    const rectCenter = rect.getCenterPoint();
+    const halfWidth = rect.width / 2;
+    const halfHeight = rect.height / 2;
+
+    const dx = halfWidth * Math.sign(Math.cos(angle));
+    const dy = halfHeight * Math.sign(Math.sin(angle));
+
+    return new (window as any).fabric.Point(
+      rectCenter.x + dx,
+      rectCenter.y + dy
+    );
+  }
+
+  toggleSelection(enable: boolean) {
+    this.canvas.getObjects().forEach((object: any) => {
+      if (object instanceof (window as any).fabric.Rect) {
+        object.selectable = enable;
+        object.lockMovementX = !enable;
+        object.lockMovementY = !enable;
+      }
+    });
+
+    this.canvas.renderAll();
+  }
+
+  createConnector(startPoint: any, endPoint: any) {
+    return new (window as any).fabric.Line(
+      [startPoint.x, startPoint.y, endPoint.x, endPoint.y],
+      {
+        stroke: "green",
+        strokeWidth: 2,
+        selectable: true,
+      }
+    );
+  }
+
   /**
    * 添加/切换图片
    * @param url 图片链接
    */
   setImage(url: string) {
     this.image.src = url;
+    // (window as any).fabric.Image.fromURL(this.image.src, (img: any) => {
+    //   // Set image properties
+    //   img.set({
+    //     left: 0,
+    //     top: 0,
+    //     width: this.IMAGE_WIDTH,
+    //     height: this.IMAGE_HEIGHT,
+    //     selectable: false,
+    //   });
+
+    //   // Add image to the canvas
+    //   this.canvas.add(img);
+    // });
   }
   /**
    * 设置数据
@@ -1145,18 +1706,29 @@ export default class CanvasSelect extends EventBus {
    */
   isInBackground(e: MouseEvent | TouchEvent): boolean {
     const { mouseX, mouseY } = this.mergeEvent(e);
-
+    // // // // return (
+    // // // //   mouseX >= this.originX + this.canvas.parentElement.scrollLeft &&
+    // // // //   mouseY >= this.originY + this.canvas.parentElement.scrollTop &&
+    // // // //   mouseX <=
+    // // // //     this.originX +
+    // // // //       this.IMAGE_ORIGIN_WIDTH * this.scale +
+    // // // //       this.canvas.parentElement.scrollLeft &&
+    // // // //   mouseY <=
+    // // // //     this.originY +
+    // // // //       this.IMAGE_ORIGIN_HEIGHT * this.scale +
+    // // // //       this.canvas.parentElement.scrollTop
+    // // // // );
     return (
-      mouseX >= this.originX + this.canvas.parentElement.scrollLeft &&
-      mouseY >= this.originY + this.canvas.parentElement.scrollTop &&
+      mouseX >= this.originX + this.canvasParentNode.scrollLeft &&
+      mouseY >= this.originY + this.canvasParentNode.scrollTop &&
       mouseX <=
         this.originX +
           this.IMAGE_ORIGIN_WIDTH * this.scale +
-          this.canvas.parentElement.scrollLeft &&
+          this.canvasParentNode.scrollLeft &&
       mouseY <=
         this.originY +
           this.IMAGE_ORIGIN_HEIGHT * this.scale +
-          this.canvas.parentElement.scrollTop
+          this.canvasParentNode.scrollTop
     );
   }
   /**
@@ -1177,29 +1749,30 @@ export default class CanvasSelect extends EventBus {
    * @returns 布尔值
    */
   isPointInPolygon(point: Point, coor: Point[]): boolean {
-    this.offScreenCtx.save();
-    this.offScreenCtx.clearRect(0, 0, this.WIDTH, this.HEIGHT);
-    this.offScreenCtx.translate(this.originX, this.originY);
-    this.offScreenCtx.beginPath();
-    coor.forEach((pt, i) => {
-      const [x, y] = pt.map((a) => Math.round(a * this.scale));
-      if (i === 0) {
-        this.offScreenCtx.moveTo(x, y);
-      } else {
-        this.offScreenCtx.lineTo(x, y);
-      }
-    });
-    this.offScreenCtx.closePath();
-    this.offScreenCtx.fill();
-    const areaData = this.offScreenCtx.getImageData(
-      0,
-      0,
-      this.WIDTH,
-      this.HEIGHT
-    );
-    const index = (point[1] - 1) * this.WIDTH * 4 + point[0] * 4;
-    this.offScreenCtx.restore();
-    return areaData.data[index + 3] !== 0;
+    // // // // this.offScreenCtx.save();
+    // // // // this.offScreenCtx.clearRect(0, 0, this.WIDTH, this.HEIGHT);
+    // // // // this.offScreenCtx.translate(this.originX, this.originY);
+    // // // // this.offScreenCtx.beginPath();
+    // // // // coor.forEach((pt, i) => {
+    // // // //   const [x, y] = pt.map((a) => Math.round(a * this.scale));
+    // // // //   if (i === 0) {
+    // // // //     this.offScreenCtx.moveTo(x, y);
+    // // // //   } else {
+    // // // //     this.offScreenCtx.lineTo(x, y);
+    // // // //   }
+    // // // // });
+    // // // // this.offScreenCtx.closePath();
+    // // // // this.offScreenCtx.fill();
+    // // // // const areaData = this.offScreenCtx.getImageData(
+    // // // //   0,
+    // // // //   0,
+    // // // //   this.WIDTH,
+    // // // //   this.HEIGHT
+    // // // // );
+    // // // // const index = (point[1] - 1) * this.WIDTH * 4 + point[0] * 4;
+    // // // // this.offScreenCtx.restore();
+    // // // // return areaData.data[index + 3] !== 0;
+    return false;
   }
   /**
    * 判断是否在圆内
@@ -1212,9 +1785,13 @@ export default class CanvasSelect extends EventBus {
   isPointInCircle(point: Point, center: Point, r: number): boolean {
     const [x, y] = point;
     const [x0, y0] = center.map((a) => a * this.scale);
+    // // // // const distance = Math.sqrt(
+    // // // //   (x0 + (this.originX + this.canvas.parentElement.scrollLeft) - x) ** 2 +
+    // // // //     (y0 + (this.originY + this.canvas.parentElement.scrollTop) - y) ** 2
+    // // // // );
     const distance = Math.sqrt(
-      (x0 + (this.originX + this.canvas.parentElement.scrollLeft) - x) ** 2 +
-        (y0 + (this.originY + this.canvas.parentElement.scrollTop) - y) ** 2
+      (x0 + (this.originX + this.canvasParentNode.scrollLeft) - x) ** 2 +
+        (y0 + (this.originY + this.canvasParentNode.scrollTop) - y) ** 2
     );
     return distance <= r;
   }
@@ -1310,18 +1887,34 @@ Determines if a given circle intersects with a line segment defined by two point
     const [[x0, y0], [x1, y1]] = coor.map((a: Point) =>
       a.map((b) => Math.round(b * this.scale))
     );
-    this.ctx.save();
-    this.ctx.fillStyle = fillStyle || this.fillStyle;
-    this.ctx.strokeStyle =
-      active || creating
-        ? this.activeStrokeStyle
-        : strokeStyle || this.strokeStyle;
+
+    // // // // this.ctx.save();
+    // // // // this.ctx.fillStyle = fillStyle || this.fillStyle;
+    // // // // this.ctx.strokeStyle =
+    // // // //   active || creating
+    // // // //     ? this.activeStrokeStyle
+    // // // //     : strokeStyle || this.strokeStyle;
     const w = x1 - x0;
     const h = y1 - y0;
-    this.ctx.lineWidth = this.LineWidth;
-    this.ctx.strokeRect(x0, y0, w, h);
-    if (!creating) this.ctx.fillRect(x0, y0, w, h);
-    this.ctx.restore();
+    // // // // this.ctx.lineWidth = this.LineWidth;
+    // // // // this.ctx.strokeRect(x0, y0, w, h);
+    // // // // if (!creating) this.ctx.fillRect(x0, y0, w, h);
+
+    const rect = new (window as any).fabric.Rect({
+      left: x0, // x-coordinate
+      top: y0, // y-coordinate
+      width: w,
+      height: h,
+      fill: fillStyle || this.fillStyle,
+      stroke:
+        active || creating
+          ? this.activeStrokeStyle
+          : strokeStyle || this.strokeStyle,
+      strokeWidth: this.LineWidth,
+    });
+    // // // // this.ctx.restore();
+    // this.canvas.add(rect);
+    // this.canvas.renderAll();
     if (!this.hideAnnotateLabels) this.drawLabel(coor[0], shape);
   }
   /**
@@ -1330,30 +1923,30 @@ Determines if a given circle intersects with a line segment defined by two point
    */
   drawPolygon(shape: Polygon) {
     const { strokeStyle, fillStyle, active, creating, coor } = shape;
-    this.ctx.save();
-    this.ctx.fillStyle = fillStyle || this.fillStyle;
-    this.ctx.strokeStyle =
-      active || creating
-        ? this.activeStrokeStyle
-        : strokeStyle || this.strokeStyle;
-    this.ctx.beginPath();
-    coor.forEach((el: Point, i) => {
-      const [x, y] = el.map((a) => Math.round(a * this.scale));
-      if (i === 0) {
-        this.ctx.moveTo(x, y);
-      } else {
-        this.ctx.lineTo(x, y);
-      }
-    });
-    if (creating) {
-      const [x, y] = this.mouse || [];
-      this.ctx.lineTo(x - this.originX, y - this.originY);
-    } else if (coor.length > 2) {
-      this.ctx.closePath();
-    }
-    this.ctx.fill();
-    this.ctx.stroke();
-    this.ctx.restore();
+    // // // // this.ctx.save();
+    // // // // this.ctx.fillStyle = fillStyle || this.fillStyle;
+    // // // // this.ctx.strokeStyle =
+    // // // //   active || creating
+    // // // //     ? this.activeStrokeStyle
+    // // // //     : strokeStyle || this.strokeStyle;
+    // // // // this.ctx.beginPath();
+    // // // // coor.forEach((el: Point, i) => {
+    // // // //   const [x, y] = el.map((a) => Math.round(a * this.scale));
+    // // // //   if (i === 0) {
+    // // // //     this.ctx.moveTo(x, y);
+    // // // //   } else {
+    // // // //     this.ctx.lineTo(x, y);
+    // // // //   }
+    // // // // });
+    // // // // if (creating) {
+    // // // //   const [x, y] = this.mouse || [];
+    // // // //   this.ctx.lineTo(x - this.originX, y - this.originY);
+    // // // // } else if (coor.length > 2) {
+    // // // //   this.ctx.closePath();
+    // // // // }
+    // // // // this.ctx.fill();
+    // // // // this.ctx.stroke();
+    // // // // this.ctx.restore();
     if (!this.hideAnnotateLabels) this.drawLabel(coor[0], shape);
   }
   /**
@@ -1363,17 +1956,26 @@ Determines if a given circle intersects with a line segment defined by two point
   drawDot(shape: Dot) {
     const { strokeStyle, fillStyle, active, coor } = shape;
     const [x, y] = coor.map((a) => a * this.scale);
-    this.ctx.save();
-    this.ctx.fillStyle = fillStyle || this.ctrlFillStyle;
-    this.ctx.strokeStyle = active
-      ? this.activeStrokeStyle
-      : strokeStyle || this.strokeStyle;
-    this.ctx.beginPath();
-    this.ctx.arc(x, y, this.ctrlRadius, 0, 2 * Math.PI, true);
-    this.ctx.fill();
-    this.ctx.arc(x, y, this.ctrlRadius, 0, 2 * Math.PI, true);
-    this.ctx.stroke();
-    this.ctx.restore();
+    const dot = new (window as any).fabric.Circle({
+      left: x,
+      top: y,
+      radius: this.ctrlRadius, // Adjust the dot size as needed
+      fill: fillStyle || this.ctrlFillStyle, // Dot color,
+      stroke: active ? this.activeStrokeStyle : strokeStyle || this.strokeStyle,
+    });
+    this.canvas.add(dot);
+    this.canvas.renderAll();
+    // // // // this.ctx.save();
+    // // // // this.ctx.fillStyle = fillStyle || this.ctrlFillStyle;
+    // // // // this.ctx.strokeStyle = active
+    // // // //   ? this.activeStrokeStyle
+    // // // //   : strokeStyle || this.strokeStyle;
+    // // // // this.ctx.beginPath();
+    // // // // this.ctx.arc(x, y, this.ctrlRadius, 0, 2 * Math.PI, true);
+    // // // // this.ctx.fill();
+    // // // // this.ctx.arc(x, y, this.ctrlRadius, 0, 2 * Math.PI, true);
+    // // // // this.ctx.stroke();
+    // // // // this.ctx.restore();
     if (!this.hideAnnotateLabels) this.drawLabel(coor as Point, shape);
   }
   /**
@@ -1392,18 +1994,29 @@ Determines if a given circle intersects with a line segment defined by two point
       ctrlsData,
     } = shape;
     const [x, y] = coor.map((a) => a * this.scale);
-    this.ctx.save();
-    this.ctx.fillStyle = fillStyle || this.fillStyle;
-    this.ctx.strokeStyle =
-      active || creating
-        ? this.activeStrokeStyle
-        : strokeStyle || this.strokeStyle;
-    this.ctx.beginPath();
-    this.ctx.arc(x, y, radius * this.scale, 0, 2 * Math.PI, true);
-    this.ctx.fill();
-    this.ctx.arc(x, y, radius * this.scale, 0, 2 * Math.PI, true);
-    this.ctx.stroke();
-    this.ctx.restore();
+
+    const cirle = new (window as any).fabric.Circle({
+      left: x,
+      top: y,
+      radius: radius * this.scale, // Adjust the dot size as needed
+      fill: fillStyle || this.ctrlFillStyle, // Dot color,
+      stroke: active ? this.activeStrokeStyle : strokeStyle || this.strokeStyle,
+    });
+    this.canvas.add(cirle);
+    this.canvas.renderAll();
+
+    // // // // this.ctx.save();
+    // // // // this.ctx.fillStyle = fillStyle || this.fillStyle;
+    // // // // this.ctx.strokeStyle =
+    // // // //   active || creating
+    // // // //     ? this.activeStrokeStyle
+    // // // //     : strokeStyle || this.strokeStyle;
+    // // // // this.ctx.beginPath();
+    // // // // this.ctx.arc(x, y, radius * this.scale, 0, 2 * Math.PI, true);
+    // // // // this.ctx.fill();
+    // // // // this.ctx.arc(x, y, radius * this.scale, 0, 2 * Math.PI, true);
+    // // // // this.ctx.stroke();
+    // // // // this.ctx.restore();
     if (!this.hideAnnotateLabels) this.drawLabel(ctrlsData[0] as Point, shape);
   }
   /**
@@ -1412,27 +2025,48 @@ Determines if a given circle intersects with a line segment defined by two point
    */
   drawLine(shape: Line | Connectivity) {
     const { strokeStyle, active, creating, coor } = shape;
-    this.ctx.save();
-    this.ctx.lineWidth = this.LineWidth;
-    this.ctx.strokeStyle =
-      active || creating
-        ? this.activeStrokeStyle
-        : strokeStyle || this.strokeStyle;
-    this.ctx.beginPath();
+    let startPoint: any;
+    let endPoint: any;
+    let line: any;
+    // // // // this.ctx.save();
+    // // // // this.ctx.lineWidth = this.LineWidth;
+    // // // // this.ctx.strokeStyle =
+    // // // //   active || creating
+    // // // //     ? this.activeStrokeStyle
+    // // // //     : strokeStyle || this.strokeStyle;
+    // // // // this.ctx.beginPath();
     coor.forEach((el: Point, i) => {
       const [x, y] = el.map((a) => Math.round(a * this.scale));
       if (i === 0) {
-        this.ctx.moveTo(x, y);
+        startPoint = new (window as any).fabric.Point(x, y);
+        // // // // this.ctx.moveTo(x, y);
       } else {
-        this.ctx.lineTo(x, y);
+        // // // // this.ctx.lineTo(x, y);
+        endPoint = new (window as any).fabric.Point(x, y);
       }
     });
     if (creating) {
       const [x, y] = this.mouse || [];
-      this.ctx.lineTo(x, y);
+      // this.ctx.lineTo(x, y);
+      endPoint = new (window as any).fabric.Point(x, y);
     }
-    this.ctx.stroke();
-    this.ctx.restore();
+    if (startPoint && endPoint) {
+      line = new (window as any).fabric.Line(
+        [startPoint.x, startPoint.y, endPoint.x, endPoint.y],
+        {
+          stroke:
+            active || creating
+              ? this.activeStrokeStyle
+              : strokeStyle || this.strokeStyle, // Line color
+          strokeWidth: this.LineWidth, // Line width
+        }
+      );
+    }
+    // Add the line to the canvas
+    this.canvas.add(line);
+    this.canvas.renderAll();
+    // // // // this.ctx.stroke();
+    // // // // this.ctx.restore();
     if (!this.hideAnnotateLabels) this.drawLabel(coor[0], shape);
   }
   /**
@@ -1441,15 +2075,26 @@ Determines if a given circle intersects with a line segment defined by two point
    */
   drawCtrl(point: Point) {
     const [x, y] = point.map((a) => a * this.scale);
-    this.ctx.save();
-    this.ctx.beginPath();
-    this.ctx.fillStyle = this.ctrlFillStyle;
-    this.ctx.strokeStyle = this.ctrlStrokeStyle;
-    this.ctx.arc(x, y, this.ctrlRadius, 0, 2 * Math.PI, true);
-    this.ctx.fill();
-    this.ctx.arc(x, y, this.ctrlRadius, 0, 2 * Math.PI, true);
-    this.ctx.stroke();
-    this.ctx.restore();
+
+    const cirle = new (window as any).fabric.Circle({
+      left: x,
+      top: y,
+      radius: this.ctrlRadius, // Adjust the dot size as needed
+      fill: this.ctrlFillStyle, // Dot color,
+      stroke: this.ctrlStrokeStyle,
+    });
+    this.canvas.add(cirle);
+    this.canvas.renderAll();
+
+    // // // // this.ctx.save();
+    // // // // this.ctx.beginPath();
+    // // // // this.ctx.fillStyle = this.ctrlFillStyle;
+    // // // // this.ctx.strokeStyle = this.ctrlStrokeStyle;
+    // // // // this.ctx.arc(x, y, this.ctrlRadius, 0, 2 * Math.PI, true);
+    // // // // this.ctx.fill();
+    // // // // this.ctx.arc(x, y, this.ctrlRadius, 0, 2 * Math.PI, true);
+    // // // // this.ctx.stroke();
+    // // // // this.ctx.restore();
   }
   /**
    * 绘制控制点列表
@@ -1478,33 +2123,49 @@ Determines if a given circle intersects with a line segment defined by two point
       hideLabel = false,
     } = shape;
     if (label.length && !(hideLabel || this.hideLabel)) {
-      this.ctx.font = labelFont || this.labelFont;
-      const textH = parseInt(this.ctx.font) + 6;
+      // // // // this.ctx.font = labelFont || this.labelFont;
+      // // // // const textH = parseInt(this.ctx.font) + 6;
+      const lblFont = labelFont || this.labelFont;
+      const textH = parseInt(lblFont) + 6;
       const newText =
         label.length < this.labelMaxLen + 1
           ? label
           : `${label.slice(0, this.labelMaxLen)}...`;
-      const text = this.ctx.measureText(newText);
+
+      const lbl = new (window as any).fabric.Text(newText, {
+        fontSize: 16,
+        fill: textFillStyle || this.textFillStyle,
+      });
+      // const text = this.ctx.measureText(newText);
+      const text = lbl;
       const [x, y] = point.map((a) => a * this.scale);
       const toleft =
         this.IMAGE_ORIGIN_WIDTH - point[0] < (text.width + 4) / this.scale;
       const toTop = this.IMAGE_ORIGIN_HEIGHT - point[1] < textH / this.scale;
-      this.ctx.save();
-      this.ctx.fillStyle = labelFillStyle || this.labelFillStyle;
-      this.ctx.fillRect(
-        toleft ? x - text.width - 3 : x + 1,
-        toTop ? y - textH + 3 : y + 1,
-        text.width + 4,
-        textH
-      );
-      this.ctx.fillStyle = textFillStyle || this.textFillStyle;
-      this.ctx.fillText(
-        newText,
-        toleft ? x - text.width - 2 : x + 2,
-        toTop ? y - 3 : y + textH - 4,
-        180
-      );
-      this.ctx.restore();
+
+      lbl.set({
+        left: toleft ? x - text.width - 2 : x + 2,
+        top: toTop ? y - 3 : y + textH - 4,
+      });
+      // Add the text to the canvas
+      this.canvas.add(lbl);
+      this.canvas.renderAll();
+      // // // // this.ctx.save();
+      // // // // this.ctx.fillStyle = labelFillStyle || this.labelFillStyle;
+      // // // // this.ctx.fillRect(
+      // // // //   toleft ? x - text.width - 3 : x + 1,
+      // // // //   toTop ? y - textH + 3 : y + 1,
+      // // // //   text.width + 4,
+      // // // //   textH
+      // // // // );
+      // // // // this.ctx.fillStyle = textFillStyle || this.textFillStyle;
+      // // // // this.ctx.fillText(
+      // // // //   newText,
+      // // // //   toleft ? x - text.width - 2 : x + 2,
+      // // // //   toTop ? y - 3 : y + textH - 4,
+      // // // //   180
+      // // // // );
+      // // // // this.ctx.restore();
     }
   }
 
@@ -1514,24 +2175,66 @@ Determines if a given circle intersects with a line segment defined by two point
   update() {
     clearTimeout(this.timer);
     this.timer = setTimeout(() => {
-      this.ctx.save();
-      this.ctx.clearRect(0, 0, this.WIDTH, this.HEIGHT);
-      this.ctx.translate(this.originX, this.originY);
-      if (this.IMAGE_WIDTH && this.IMAGE_HEIGHT) {
-        this.canvas.style.width = this.IMAGE_WIDTH + "px";
-        this.canvas.style.height = this.IMAGE_HEIGHT + "px";
-        this.canvas.width = this.IMAGE_WIDTH;
-        this.canvas.height = this.IMAGE_HEIGHT;
-        this.canvas.parentElement.scrollLeft = this.originX * -1;
-        this.canvas.parentElement.scrollTop = this.originY * -1;
-        this.ctx.drawImage(
-          this.image,
-          0,
-          0,
-          this.IMAGE_WIDTH,
-          this.IMAGE_HEIGHT
+      console.log("Call updte", this.IMAGE_WIDTH, this.IMAGE_HEIGHT);
+      const xScale = this.orgWidth / this.IMAGE_WIDTH;
+      const yScale = this.orgHeight / this.IMAGE_HEIGHT;
+      const minScale = Math.min(xScale, yScale);
+      (window as any).fabric.Image.fromURL(this.image.src, (img: any) => {
+        // Set image properties
+        // img.set({
+        //   left: 0,
+        //   top: 0,
+        //   width: this.IMAGE_WIDTH,
+        //   height: this.IMAGE_HEIGHT,
+        //   selectable: false,
+        // });
+        console.log("Img obj", img);
+        // Add image to the canvas
+        // this.canvas.add(img);
+        this.canvas.setBackgroundImage(
+          img,
+          this.canvas.renderAll.bind(this.canvas),
+          {
+            scaleX: minScale,
+            scaleY: minScale,
+          }
         );
-      }
+      });
+      // // // // (window as any).fabric.Image.fromURL(this.image.src, (img: any) => {
+      // // // //   console.log(this.IMAGE_WIDTH, this.IMAGE_HEIGHT);
+      // // // //   // Set image properties
+      // // // //   img.set({
+      // // // //     left: 0,
+      // // // //     top: 0,
+      // // // //     width: this.IMAGE_WIDTH,
+      // // // //     height: this.IMAGE_HEIGHT,
+      // // // //     selectable: false,
+      // // // //   });
+
+      // // // //   // Add image to the canvas
+      // // // //   this.canvas.add(img);
+
+      // // // //   console.log(img);
+      // // // // });
+
+      // // // // this.ctx.save();
+      // // // // this.ctx.clearRect(0, 0, this.WIDTH, this.HEIGHT);
+      // // // // this.ctx.translate(this.originX, this.originY);
+      // // // // if (this.IMAGE_WIDTH && this.IMAGE_HEIGHT) {
+      // // // //   this.canvas.sty le.width = this.IMAGE_WIDTH + "px";
+      // // // //   this.canvas.style.height = this.IMAGE_HEIGHT + "px";
+      // // // //   this.canvas.width = this.IMAGE_WIDTH;
+      // // // //   this.canvas.height = this.IMAGE_HEIGHT;
+      // // // //   this.canvas.parentElement.scrollLeft = this.originX * -1;
+      // // // //   this.canvas.parentElement.scrollTop = this.originY * -1;
+      // // // //   this.ctx.drawImage(
+      // // // //     this.image,
+      // // // //     0,
+      // // // //     0,
+      // // // //     this.IMAGE_WIDTH,
+      // // // //     this.IMAGE_HEIGHT
+      // // // //   );
+      // // // // }
       let renderList = this.focusMode
         ? this.activeShape.type
           ? [this.activeShape]
@@ -1599,7 +2302,7 @@ Determines if a given circle intersects with a line segment defined by two point
       ) {
         this.drawCtrlList(this.activeShape);
       }
-      this.ctx.restore();
+      // // // // this.ctx.restore();
       this.emit("updated", this.dataset);
     });
   }
@@ -1778,74 +2481,165 @@ Determines if a given circle intersects with a line segment defined by two point
   }
 
   setScale(type: boolean, byMouse = false, pure = false) {
-    if (this.lock) return;
-    if (
-      (!type &&
-        ((this.IMAGE_WIDTH <= this.WIDTH && this.IMAGE_HEIGHT <= this.HEIGHT) ||
-          this.scaleStep < 0)) ||
-      (type && this.IMAGE_WIDTH >= this.imageOriginMax * 10)
-    )
-      return;
+    // if (type) this.ZoomLevel *= 1.1;
+    // else this.ZoomLevel *= 0.9;
 
-    let currentZoomLevel = this.ZoomLevel;
-    let zoomStep = 10;
-    let newZoomLevel = currentZoomLevel;
-    let zoomResetScale = 100 / currentZoomLevel;
-    if (type) {
-      newZoomLevel += zoomStep;
-      if (newZoomLevel > 400) newZoomLevel = 400;
-      // this.scaleStep++;
-    } else {
-      newZoomLevel -= zoomStep;
-      if (newZoomLevel < 100) newZoomLevel = 100;
-      // this.scaleStep--;
-    }
-    let realToLeft = 0;
-    let realToRight = 0;
-    const [x, y] = this.mouse || [];
-    if (byMouse) {
-      realToLeft = (x - this.originX) / this.scale;
-      realToRight = (y - this.originY) / this.scale;
-    }
-    const abs = Math.abs(this.scaleStep);
-    const width = this.IMAGE_WIDTH;
-    let originalImageWidth = this.IMAGE_WIDTH * zoomResetScale;
-    let originalImageHeight = this.IMAGE_HEIGHT * zoomResetScale;
-    this.IMAGE_WIDTH = Math.round(originalImageWidth * (newZoomLevel / 100));
-    this.IMAGE_HEIGHT = Math.round(originalImageHeight * (newZoomLevel / 100));
-    this.ZoomLevel = newZoomLevel;
-    if (byMouse) {
-      this.originX -= x / (this.scale * newZoomLevel) - x / this.scale;
-      this.originY -= y / (this.scale * newZoomLevel) - y / this.scale;
-    } else {
-      const scale = this.IMAGE_WIDTH / width;
-      this.originX = this.WIDTH / 2 - (this.WIDTH / 2 - this.originX) * scale;
-      this.originY = this.HEIGHT / 2 - (this.HEIGHT / 2 - this.originY) * scale;
-    }
-    if (!pure && currentZoomLevel !== newZoomLevel) {
-      this.update();
-    }
+    if (type) this.ZoomLevel += 0.1;
+    else this.ZoomLevel -= 0.1;
+
+    console.log("zoomlevel", this.ZoomLevel);
+
+    if (this.ZoomLevel > 1) this.updateCanvasZoom();
+    else this.fitZoom();
+    // let xscale = this.orgWidth / this.IMAGE_WIDTH;
+    // let yscale = this.orgHeight / this.IMAGE_HEIGHT;
+    // let finalScale = Math.max(xscale, yscale);
+    // let zoomLevelThreshold = (100 * finalScale) / 100;
+
+    // if (this.ZoomLevel >= zoomLevelThreshold) {
+    //   this.updateCanvasZoom();
+    // } else {
+    //   this.fitZoom();
+    // }
+
+    // if (this.lock) return;
+    // if (
+    //   (!type &&
+    //     ((this.IMAGE_WIDTH <= this.WIDTH && this.IMAGE_HEIGHT <= this.HEIGHT) ||
+    //       this.scaleStep < 0)) ||
+    //   (type && this.IMAGE_WIDTH >= this.imageOriginMax * 10)
+    // )
+    //   return;
+
+    // let currentZoomLevel = this.ZoomLevel;
+    // let zoomStep = 10;
+    // let newZoomLevel = currentZoomLevel;
+    // let zoomResetScale = 100 / currentZoomLevel;
+    // if (type) {
+    //   newZoomLevel += zoomStep;
+    //   if (newZoomLevel > 400) newZoomLevel = 400;
+    //   // this.scaleStep++;
+    // } else {
+    //   newZoomLevel -= zoomStep;
+    //   if (newZoomLevel < 100) newZoomLevel = 100;
+    //   // this.scaleStep--;
+    // }
+    // let realToLeft = 0;
+    // let realToRight = 0;
+    // const [x, y] = this.mouse || [];
+    // if (byMouse) {
+    //   realToLeft = (x - this.originX) / this.scale;
+    //   realToRight = (y - this.originY) / this.scale;
+    // }
+    // const abs = Math.abs(this.scaleStep);
+    // const width = this.IMAGE_WIDTH;
+    // let originalImageWidth = this.IMAGE_WIDTH * zoomResetScale;
+    // let originalImageHeight = this.IMAGE_HEIGHT * zoomResetScale;
+    // this.IMAGE_WIDTH = Math.round(originalImageWidth * (newZoomLevel / 100));
+    // this.IMAGE_HEIGHT = Math.round(originalImageHeight * (newZoomLevel / 100));
+    // this.ZoomLevel = newZoomLevel;
+    // if (byMouse) {
+    //   this.originX -= x / (this.scale * newZoomLevel) - x / this.scale;
+    //   this.originY -= y / (this.scale * newZoomLevel) - y / this.scale;
+    // } else {
+    //   const scale = this.IMAGE_WIDTH / width;
+    //   this.originX = this.WIDTH / 2 - (this.WIDTH / 2 - this.originX) * scale;
+    //   this.originY = this.HEIGHT / 2 - (this.HEIGHT / 2 - this.originY) * scale;
+    // }
+    // if (!pure && currentZoomLevel !== newZoomLevel) {
+    //   this.update();
+    // }
   }
 
   /**
    * 适配背景图
    */
   fitZoom() {
-    this.calcStep();
-    if (this.IMAGE_HEIGHT / this.IMAGE_WIDTH >= this.HEIGHT / this.WIDTH) {
-      this.IMAGE_WIDTH =
-        this.IMAGE_ORIGIN_WIDTH / (this.IMAGE_ORIGIN_HEIGHT / this.HEIGHT);
-      this.IMAGE_HEIGHT = this.HEIGHT;
-    } else {
-      this.IMAGE_WIDTH = this.WIDTH;
-      this.IMAGE_HEIGHT =
-        this.IMAGE_ORIGIN_HEIGHT / (this.IMAGE_ORIGIN_WIDTH / this.WIDTH);
-    }
+    const initialWidth = this.orgWidth;
+    const initialHeight = this.orgHeight;
+    const xScale = initialWidth / this.IMAGE_WIDTH;
+    const yScale = initialHeight / this.IMAGE_HEIGHT;
+    const minScale = Math.min(xScale, yScale);
+    // this.canvas.width = this.IMAGE_WIDTH * minScale;
+    // this.canvas.height = this.IMAGE_HEIGHT * minScale;
+    console.log("minScale", minScale, xScale, yScale);
+    this.ZoomLevel = 1;
+
+    // this.canvas.setDimensions({ width: initialWidth, height: initialHeight });
+
     this.originX = 0;
     this.originY = 0;
-    this.ZoomLevel = 100;
-    this.update();
+    this.updateCanvasZoom();
   }
+
+  updateCanvasZoom() {
+    console.log(this.ZoomLevel);
+    const newWidth = this.orgWidth * this.ZoomLevel;
+    const newHeight = this.orgHeight * this.ZoomLevel;
+    this.canvas.setZoom(this.ZoomLevel);
+
+    this.canvas.setDimensions({ width: newWidth, height: newHeight });
+
+    // Update the canvas content position to keep it centered
+    const offsetX = (this.canvas.wrapperEl.clientWidth - newWidth) / 2;
+    const offsetY = (this.canvas.wrapperEl.clientHeight - newHeight) / 2;
+    this.canvas.absolutePan({ x: offsetX, y: offsetY });
+    this.canvas.renderAll();
+    console.log("3321", this.canvas);
+    // this.update();
+    // // // const [x, y] = this.mouse || [];
+    // // // console.log("[x,y]", this.orgWidth, this.orgHeight);
+    // // // console.log(this.canvas);
+    // // // const a1 = this.orgWidth * this.ZoomLevel;
+    // // // const p1 = this.orgHeight * this.ZoomLevel;
+    // // // const a2 = this.orgWidth / this.ZoomLevel;
+    // // // const p2 = this.orgHeight / this.ZoomLevel;
+    // this.canvas.setZoom(this.ZoomLevel);
+    // this.canvas.setDimensions({ width: a2, height: p2 });
+    // this.canvas.wrapperEl.style.width = `${a1}px`;
+    // this.canvas.wrapperEl.style.height = `${p1}px`;
+    // this.canvas.lowerCanvasEl.width = a1;
+    // this.canvas.lowerCanvasEl.height = p1;
+    // this.canvas.upperCanvasEl.width = a1;
+    // this.canvas.upperCanvasEl.height = p1;
+    // Get the current scroll position of the container
+    // // const currentScrollLeft = this.canvasParentNode.scrollLeft;
+    // // const currentScrollTop = this.canvasParentNode.scrollTop;
+
+    // // // Calculate the canvas position at the current mouse coordinates
+    // // const canvasXAtMouse = (x + currentScrollLeft) / this.ZoomLevel;
+    // // const canvasYAtMouse = (y + currentScrollTop) / this.ZoomLevel;
+
+    // // // Calculate the change in scroll position needed to keep the mouse position fixed
+    // // const scrollChangeX = canvasXAtMouse * this.ZoomLevel - x;
+    // // const scrollChangeY = canvasYAtMouse * this.ZoomLevel - y;
+
+    // // // Calculate the new scroll position
+    // // const newScrollLeft = currentScrollLeft + scrollChangeX;
+    // // const newScrollTop = currentScrollTop + scrollChangeY;
+
+    // Set the new scroll position to maintain the mouse position
+    // // this.canvasParentNode.scrollLeft = newScrollLeft;
+    // // this.canvasParentNode.scrollTop = newScrollTop;
+    // // console.log("this.newScrollLeft", newScrollLeft, newScrollTop);
+    // // console.log("this.canvasParentNode", this.canvasParentNode);
+    //
+    // this.updateCanvasDimensions();
+  }
+
+  // // // // updateCanvasDimensions() {
+  // // // //   const zoom = this.canvas.getZoom();
+  // // // //   const scaledWidth = this.canvas.getWidth() * zoom;
+  // // // //   const scaledHeight = this.canvas.getHeight() * zoom;
+
+  // // // //   this.canvas.setDimensions({
+  // // // //     width: scaledWidth,
+  // // // //     height: scaledHeight,
+  // // // //   });
+
+  // // // //   this.canvas.requestRenderAll();
+  // // // // }
+
   /**
    * 设置专注模式
    * @param type {boolean}
@@ -1859,33 +2653,56 @@ Determines if a given circle intersects with a line segment defined by two point
    */
   destroy() {
     this.image.removeEventListener("load", this.handleLoad);
-    this.canvas.removeEventListener("contextmenu", this.handleContextmenu);
-    this.canvas.removeEventListener("mousewheel", this.handleMousewheel);
-    this.canvas.removeEventListener("wheel", this.handleMousewheel);
-    this.canvas.removeEventListener("mousedown", this.handleMouseDown);
-    this.canvas.removeEventListener("touchend", this.handleMouseDown);
-    this.canvas.removeEventListener("mousemove", this.handelMouseMove);
-    this.canvas.removeEventListener("touchmove", this.handelMouseMove);
-    this.canvas.removeEventListener("mouseup", this.handelMouseUp);
-    this.canvas.removeEventListener("mouseleave", this.handelLeave);
-    this.canvas.removeEventListener("touchend", this.handelMouseUp);
-    this.canvas.removeEventListener("dblclick", this.handelDblclick);
+    // // // // this.canvas.removeEventListener("contextmenu", this.handleContextmenu);
+    // // // // this.canvas.removeEventListener("mousewheel", this.handleMousewheel);
+    // // // // this.canvas.removeEventListener("wheel", this.handleMousewheel);
+    // // // // this.canvas.removeEventListener("mousedown", this.handleMouseDown);
+    // // // // this.canvas.removeEventListener("touchend", this.handleMouseDown);
+    // // // // this.canvas.removeEventListener("mousemove", this.handelMouseMove);
+    // // // // this.canvas.removeEventListener("touchmove", this.handelMouseMove);
+    // // // // this.canvas.removeEventListener("mouseup", this.handelMouseUp);
+    // // // // this.canvas.removeEventListener("mouseleave", this.handelLeave);
+    // // // // this.canvas.removeEventListener("touchend", this.handelMouseUp);
+    // // // // this.canvas.removeEventListener("dblclick", this.handelDblclick);
+    this.canvas.off("contextmenu", this.handleContextmenu as any);
+    this.canvas.off("mouse:wheel", this.handleMousewheel as any);
+    this.canvas.off("wheel", this.handleMousewheel as any);
+    this.canvas.off("mousedown", this.handleMouseDown as any);
+    this.canvas.off("touchend", this.handleMouseDown as any);
+    this.canvas.off("mousemove", this.handelMouseMove as any);
+    this.canvas.off("touchmove", this.handelMouseMove as any);
+    this.canvas.off("mouseup", this.handelMouseUp as any);
+    this.canvas.off("mouseleave", this.handelLeave);
+    this.canvas.off("touchend", this.handelMouseUp as any);
+    this.canvas.off("dblclick", this.handelDblclick as any);
+    this.canvas.on("mouse:down", this.handleMouseDownR as any);
+    this.canvas.on("mouse:move", this.handelMouseMoveR as any);
+    this.canvas.on("mouse:up", this.handelMouseUpR as any);
+    this.canvas.on("mouse:out", this.handelLeave);
+    this.canvas.on("mouse:dblclick", this.handelDblclick as any);
+    this.canvas.on("object:moving", this.handelObjectMove as any);
     document.body.removeEventListener("keyup", this.handelKeyup);
-    this.canvas.parentElement.removeEventListener("scroll", this.handleScroll);
-    this.canvas.width = this.WIDTH;
-    this.canvas.height = this.HEIGHT;
-    this.canvas.style.width = null;
-    this.canvas.style.height = null;
-    this.canvas.style.userSelect = null;
+    this.canvasParentNode.removeEventListener("scroll", this.handleScroll);
+    // // // // this.canvas.width = this.WIDTH;
+    // // // // this.canvas.height = this.HEIGHT;
+    // // // // this.canvas.style.width = null;
+    // // // // this.canvas.style.height = null;
+    // // // // this.canvas.style.userSelect = null;
+    this.canvas.setWidth(this.WIDTH);
+    this.canvas.setHeight(this.HEIGHT);
+    this.canvas.renderAll();
   }
   /**
    * 重新设置画布大小
    */
   resize() {
-    this.canvas.width = null;
-    this.canvas.height = null;
-    this.canvas.style.width = null;
-    this.canvas.style.height = null;
+    this.canvas.setWidth(null);
+    this.canvas.setHeight(null);
+    this.canvas.renderAll();
+    // // // // this.canvas.width = null;
+    // // // // this.canvas.height = null;
+    // // // // this.canvas.style.width = null;
+    // // // // this.canvas.style.height = null;
     this.initSetting();
     this.update();
   }
