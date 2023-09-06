@@ -138,7 +138,7 @@ export default class CanvasSelect extends EventBus {
 
   LineWidth = 1.5;
 
-  ZoomLevel = 100; // ZoomLevel 100 is min
+  ZoomLevel = 1; // ZoomLevel 100 is min
 
   ScrollTop = 0;
 
@@ -146,6 +146,8 @@ export default class CanvasSelect extends EventBus {
   scrollStartY = 0;
 
   rightClickMoveEvent: any = true;
+
+  backgroundImage: any;
 
   // startPoint = { x: 0, y: 0 };
   // lineObj: any;
@@ -183,16 +185,23 @@ export default class CanvasSelect extends EventBus {
     const container = typeof el === "string" ? document.querySelector(el) : el;
     if (container instanceof HTMLCanvasElement) {
       this.canvasParentNode = container.parentElement as HTMLElement;
-      console.log("1234", container);
-      // container.width = this.canvasParentNode.clientWidth; // this.canvasParentNode.clientWidth;
-      // container.height = this.canvasParentNode.clientHeight; //this.canvasParentNode.clientHeight;
       this.canvas = new (window as any).fabric.Canvas(container);
       this.orgWidth = this.canvasParentNode.clientWidth; //this.canvas.wrapperEl.offsetWidth;
       this.orgHeight = this.canvasParentNode.clientHeight; //this.canvas.wrapperEl.offsetHeight;
-      console.log("1233", this.canvas);
       this.canvas.setDimensions({
         width: this.orgWidth,
         height: this.orgHeight,
+      });
+      (window as any).fabric.Image.fromURL(src, (img: any) => {
+        this.canvas.setBackgroundImage(
+          img,
+          this.canvas.renderAll.bind(this.canvas),
+          {
+            scaleX: 1,
+            scaleY: 1,
+          }
+        );
+        this.backgroundImage = img;
       });
       // // // // this.canvas = container;
       // this.canvasParentNode = this.canvas.getElement()
@@ -1207,7 +1216,6 @@ export default class CanvasSelect extends EventBus {
   }
 
   handelMouseUpR(event: any) {
-    console.log(this.fabricObjList);
     if (
       this.isDrawing &&
       [1, 7, 8].includes(this.createType) &&
@@ -2175,66 +2183,6 @@ Determines if a given circle intersects with a line segment defined by two point
   update() {
     clearTimeout(this.timer);
     this.timer = setTimeout(() => {
-      console.log("Call updte", this.IMAGE_WIDTH, this.IMAGE_HEIGHT);
-      const xScale = this.orgWidth / this.IMAGE_WIDTH;
-      const yScale = this.orgHeight / this.IMAGE_HEIGHT;
-      const minScale = Math.min(xScale, yScale);
-      (window as any).fabric.Image.fromURL(this.image.src, (img: any) => {
-        // Set image properties
-        // img.set({
-        //   left: 0,
-        //   top: 0,
-        //   width: this.IMAGE_WIDTH,
-        //   height: this.IMAGE_HEIGHT,
-        //   selectable: false,
-        // });
-        console.log("Img obj", img);
-        // Add image to the canvas
-        // this.canvas.add(img);
-        this.canvas.setBackgroundImage(
-          img,
-          this.canvas.renderAll.bind(this.canvas),
-          {
-            scaleX: minScale,
-            scaleY: minScale,
-          }
-        );
-      });
-      // // // // (window as any).fabric.Image.fromURL(this.image.src, (img: any) => {
-      // // // //   console.log(this.IMAGE_WIDTH, this.IMAGE_HEIGHT);
-      // // // //   // Set image properties
-      // // // //   img.set({
-      // // // //     left: 0,
-      // // // //     top: 0,
-      // // // //     width: this.IMAGE_WIDTH,
-      // // // //     height: this.IMAGE_HEIGHT,
-      // // // //     selectable: false,
-      // // // //   });
-
-      // // // //   // Add image to the canvas
-      // // // //   this.canvas.add(img);
-
-      // // // //   console.log(img);
-      // // // // });
-
-      // // // // this.ctx.save();
-      // // // // this.ctx.clearRect(0, 0, this.WIDTH, this.HEIGHT);
-      // // // // this.ctx.translate(this.originX, this.originY);
-      // // // // if (this.IMAGE_WIDTH && this.IMAGE_HEIGHT) {
-      // // // //   this.canvas.sty le.width = this.IMAGE_WIDTH + "px";
-      // // // //   this.canvas.style.height = this.IMAGE_HEIGHT + "px";
-      // // // //   this.canvas.width = this.IMAGE_WIDTH;
-      // // // //   this.canvas.height = this.IMAGE_HEIGHT;
-      // // // //   this.canvas.parentElement.scrollLeft = this.originX * -1;
-      // // // //   this.canvas.parentElement.scrollTop = this.originY * -1;
-      // // // //   this.ctx.drawImage(
-      // // // //     this.image,
-      // // // //     0,
-      // // // //     0,
-      // // // //     this.IMAGE_WIDTH,
-      // // // //     this.IMAGE_HEIGHT
-      // // // //   );
-      // // // // }
       let renderList = this.focusMode
         ? this.activeShape.type
           ? [this.activeShape]
@@ -2481,164 +2429,95 @@ Determines if a given circle intersects with a line segment defined by two point
   }
 
   setScale(type: boolean, byMouse = false, pure = false) {
-    // if (type) this.ZoomLevel *= 1.1;
-    // else this.ZoomLevel *= 0.9;
-
     if (type) this.ZoomLevel += 0.1;
     else this.ZoomLevel -= 0.1;
 
-    console.log("zoomlevel", this.ZoomLevel);
-
-    if (this.ZoomLevel > 1) this.updateCanvasZoom();
+    if (this.ZoomLevel) this.updateCanvasZoom();
     else this.fitZoom();
-    // let xscale = this.orgWidth / this.IMAGE_WIDTH;
-    // let yscale = this.orgHeight / this.IMAGE_HEIGHT;
-    // let finalScale = Math.max(xscale, yscale);
-    // let zoomLevelThreshold = (100 * finalScale) / 100;
-
-    // if (this.ZoomLevel >= zoomLevelThreshold) {
-    //   this.updateCanvasZoom();
-    // } else {
-    //   this.fitZoom();
-    // }
-
-    // if (this.lock) return;
-    // if (
-    //   (!type &&
-    //     ((this.IMAGE_WIDTH <= this.WIDTH && this.IMAGE_HEIGHT <= this.HEIGHT) ||
-    //       this.scaleStep < 0)) ||
-    //   (type && this.IMAGE_WIDTH >= this.imageOriginMax * 10)
-    // )
-    //   return;
-
-    // let currentZoomLevel = this.ZoomLevel;
-    // let zoomStep = 10;
-    // let newZoomLevel = currentZoomLevel;
-    // let zoomResetScale = 100 / currentZoomLevel;
-    // if (type) {
-    //   newZoomLevel += zoomStep;
-    //   if (newZoomLevel > 400) newZoomLevel = 400;
-    //   // this.scaleStep++;
-    // } else {
-    //   newZoomLevel -= zoomStep;
-    //   if (newZoomLevel < 100) newZoomLevel = 100;
-    //   // this.scaleStep--;
-    // }
-    // let realToLeft = 0;
-    // let realToRight = 0;
-    // const [x, y] = this.mouse || [];
-    // if (byMouse) {
-    //   realToLeft = (x - this.originX) / this.scale;
-    //   realToRight = (y - this.originY) / this.scale;
-    // }
-    // const abs = Math.abs(this.scaleStep);
-    // const width = this.IMAGE_WIDTH;
-    // let originalImageWidth = this.IMAGE_WIDTH * zoomResetScale;
-    // let originalImageHeight = this.IMAGE_HEIGHT * zoomResetScale;
-    // this.IMAGE_WIDTH = Math.round(originalImageWidth * (newZoomLevel / 100));
-    // this.IMAGE_HEIGHT = Math.round(originalImageHeight * (newZoomLevel / 100));
-    // this.ZoomLevel = newZoomLevel;
-    // if (byMouse) {
-    //   this.originX -= x / (this.scale * newZoomLevel) - x / this.scale;
-    //   this.originY -= y / (this.scale * newZoomLevel) - y / this.scale;
-    // } else {
-    //   const scale = this.IMAGE_WIDTH / width;
-    //   this.originX = this.WIDTH / 2 - (this.WIDTH / 2 - this.originX) * scale;
-    //   this.originY = this.HEIGHT / 2 - (this.HEIGHT / 2 - this.originY) * scale;
-    // }
-    // if (!pure && currentZoomLevel !== newZoomLevel) {
-    //   this.update();
-    // }
+    this.canvas.renderAll();
   }
 
   /**
    * 适配背景图
    */
   fitZoom() {
-    const initialWidth = this.orgWidth;
-    const initialHeight = this.orgHeight;
-    const xScale = initialWidth / this.IMAGE_WIDTH;
-    const yScale = initialHeight / this.IMAGE_HEIGHT;
-    const minScale = Math.min(xScale, yScale);
-    // this.canvas.width = this.IMAGE_WIDTH * minScale;
-    // this.canvas.height = this.IMAGE_HEIGHT * minScale;
-    console.log("minScale", minScale, xScale, yScale);
-    this.ZoomLevel = 1;
+    // Get all objects, including the background image
+    const objects = this.canvas.getObjects();
 
-    // this.canvas.setDimensions({ width: initialWidth, height: initialHeight });
+    this.canvas.setDimensions({
+      width: this.orgWidth,
+      height: this.orgHeight,
+    });
 
-    this.originX = 0;
-    this.originY = 0;
-    this.updateCanvasZoom();
+    // Initialize bounding box with background image's dimensions
+    let minX = 0;
+    let minY = 0;
+    let maxX = Math.max(this.canvas.width, this.IMAGE_WIDTH);
+    let maxY = Math.max(this.canvas.height, this.IMAGE_HEIGHT);
+
+    objects.forEach((obj: any) => {
+      const objCoords = obj.getBoundingRect();
+      minX = Math.min(minX, objCoords.left);
+      minY = Math.min(minY, objCoords.top);
+      maxX = Math.max(maxX, objCoords.left + objCoords.width);
+      maxY = Math.max(maxY, objCoords.top + objCoords.height);
+    });
+
+    // Calculate the aspect ratio of the canvas content, including the background image
+    const contentWidth = maxX - minX;
+    const contentHeight = maxY - minY;
+    const aspectRatio = contentWidth / contentHeight;
+
+    // Calculate the canvas dimensions while maintaining the aspect ratio
+    let canvasWidth: number;
+    let canvasHeight: number;
+
+    if (contentWidth > contentHeight) {
+      canvasWidth = this.canvas.getWidth()!;
+      canvasHeight = canvasWidth / aspectRatio;
+    } else {
+      canvasHeight = this.canvas.getHeight()!;
+      canvasWidth = canvasHeight * aspectRatio;
+    }
+
+    // Calculate the zoom level to fit the canvas content within the canvas dimensions, including the background image
+    this.ZoomLevel = canvasWidth / contentWidth;
+
+    // Set the calculated zoom level and pan to center the content
+    this.canvas.setZoom(this.ZoomLevel);
+    const centerX = (maxX + minX) / 2;
+    const centerY = (maxY + minY) / 2;
+    const zoomedCenterX = canvasWidth / 2 / this.ZoomLevel;
+    const zoomedCenterY = canvasHeight / 2 / this.ZoomLevel;
+    const offsetX = zoomedCenterX - centerX;
+    const offsetY = zoomedCenterY - centerY;
+    this.canvas.absolutePan({ x: offsetX, y: offsetY });
+
+    // this.ZoomLevel = 1;
+    // this.updateCanvasZoom();
   }
 
   updateCanvasZoom() {
-    console.log(this.ZoomLevel);
-    const newWidth = this.orgWidth * this.ZoomLevel;
-    const newHeight = this.orgHeight * this.ZoomLevel;
+    // const newWidth = this.orgWidth * this.ZoomLevel;
+    // const newHeight = this.orgHeight * this.ZoomLevel;
     this.canvas.setZoom(this.ZoomLevel);
 
-    this.canvas.setDimensions({ width: newWidth, height: newHeight });
-
+    if (
+      this.ZoomLevel * this.IMAGE_WIDTH > this.canvasParentNode.clientWidth ||
+      this.ZoomLevel * this.IMAGE_HEIGHT > this.canvasParentNode.clientHeight
+    ) {
+      this.canvas.setDimensions({
+        width: this.ZoomLevel * this.IMAGE_WIDTH,
+        height: this.ZoomLevel * this.IMAGE_HEIGHT,
+      });
+    } else {
+      this.fitZoom();
+    }
     // Update the canvas content position to keep it centered
-    const offsetX = (this.canvas.wrapperEl.clientWidth - newWidth) / 2;
-    const offsetY = (this.canvas.wrapperEl.clientHeight - newHeight) / 2;
-    this.canvas.absolutePan({ x: offsetX, y: offsetY });
+    // const offsetX = (this.canvas.wrapperEl.clientWidth - newWidth) / 2;
+    // const offsetY = (this.canvas.wrapperEl.clientHeight - newHeight) / 2;
     this.canvas.renderAll();
-    console.log("3321", this.canvas);
-    // this.update();
-    // // // const [x, y] = this.mouse || [];
-    // // // console.log("[x,y]", this.orgWidth, this.orgHeight);
-    // // // console.log(this.canvas);
-    // // // const a1 = this.orgWidth * this.ZoomLevel;
-    // // // const p1 = this.orgHeight * this.ZoomLevel;
-    // // // const a2 = this.orgWidth / this.ZoomLevel;
-    // // // const p2 = this.orgHeight / this.ZoomLevel;
-    // this.canvas.setZoom(this.ZoomLevel);
-    // this.canvas.setDimensions({ width: a2, height: p2 });
-    // this.canvas.wrapperEl.style.width = `${a1}px`;
-    // this.canvas.wrapperEl.style.height = `${p1}px`;
-    // this.canvas.lowerCanvasEl.width = a1;
-    // this.canvas.lowerCanvasEl.height = p1;
-    // this.canvas.upperCanvasEl.width = a1;
-    // this.canvas.upperCanvasEl.height = p1;
-    // Get the current scroll position of the container
-    // // const currentScrollLeft = this.canvasParentNode.scrollLeft;
-    // // const currentScrollTop = this.canvasParentNode.scrollTop;
-
-    // // // Calculate the canvas position at the current mouse coordinates
-    // // const canvasXAtMouse = (x + currentScrollLeft) / this.ZoomLevel;
-    // // const canvasYAtMouse = (y + currentScrollTop) / this.ZoomLevel;
-
-    // // // Calculate the change in scroll position needed to keep the mouse position fixed
-    // // const scrollChangeX = canvasXAtMouse * this.ZoomLevel - x;
-    // // const scrollChangeY = canvasYAtMouse * this.ZoomLevel - y;
-
-    // // // Calculate the new scroll position
-    // // const newScrollLeft = currentScrollLeft + scrollChangeX;
-    // // const newScrollTop = currentScrollTop + scrollChangeY;
-
-    // Set the new scroll position to maintain the mouse position
-    // // this.canvasParentNode.scrollLeft = newScrollLeft;
-    // // this.canvasParentNode.scrollTop = newScrollTop;
-    // // console.log("this.newScrollLeft", newScrollLeft, newScrollTop);
-    // // console.log("this.canvasParentNode", this.canvasParentNode);
-    //
-    // this.updateCanvasDimensions();
   }
-
-  // // // // updateCanvasDimensions() {
-  // // // //   const zoom = this.canvas.getZoom();
-  // // // //   const scaledWidth = this.canvas.getWidth() * zoom;
-  // // // //   const scaledHeight = this.canvas.getHeight() * zoom;
-
-  // // // //   this.canvas.setDimensions({
-  // // // //     width: scaledWidth,
-  // // // //     height: scaledHeight,
-  // // // //   });
-
-  // // // //   this.canvas.requestRenderAll();
-  // // // // }
 
   /**
    * 设置专注模式
