@@ -149,10 +149,6 @@ export default class CanvasSelect extends EventBus {
 
   backgroundImage: any;
 
-  // startPoint = { x: 0, y: 0 };
-  // lineObj: any;
-  // endPoint: any = { x: 0, y: 0 };
-
   lineObj: any;
   startPoint: { x: any; y: any } | null = null;
   endPoint: { x: any; y: any } | null = null;
@@ -164,6 +160,8 @@ export default class CanvasSelect extends EventBus {
   isDrawing = false;
   orgWidth = 0;
   orgHeight = 0;
+  lastX = 0;
+  lastY = 0;
 
   /**
    * @param el Valid CSS selector string, or DOM
@@ -302,8 +300,8 @@ export default class CanvasSelect extends EventBus {
     this.originX = e.target.scrollLeft * -1;
     this.originY = e.target.scrollTop * -1;
   }
-  handleContextmenu(e: MouseEvent) {
-    // // // // e.preventDefault();
+  handleContextmenu(e: any) {
+    e.preventDefault();
     this.evt = e;
     if (this.lock) return;
   }
@@ -1151,6 +1149,11 @@ export default class CanvasSelect extends EventBus {
 
   handleMouseDownR(event: any) {
     this.startPoint = this.canvas.getPointer(event.e);
+    if (this.allowPanning && event.e.button === 0) {
+      this.isDragging = true;
+      this.lastX = event.e.clientX;
+      this.lastY = event.e.clientY;
+    }
 
     if ([1, 7, 8].includes(this.createType)) {
       this.isDrawing = true;
@@ -1187,6 +1190,20 @@ export default class CanvasSelect extends EventBus {
   }
 
   handelMouseMoveR(event: any) {
+    if (this.allowPanning && this.isDragging) {
+      console.log("ABCD", this.allowPanning, event);
+      const deltaX = event.e.clientX - this.lastX;
+      const deltaY = event.e.clientY - this.lastY;
+      this.lastX = event.e.clientX;
+      this.lastY = event.e.clientY;
+
+      this.canvas.relativePan(new (window as any).fabric.Point(deltaX, deltaY));
+      console.log("deltaX", deltaX);
+      console.log("deltaY", deltaY);
+      console.log("this.canvas", this.canvas);
+      // this.canvas.wrapperEl.scrollTop += deltaY;
+      // this.canvas.wrapperEl.scrollLeft += deltaX;
+    }
     if (this.isDrawing && [1, 7, 8].includes(this.createType)) {
       const currentPoint = this.canvas.getPointer(event.e);
       this.activeRect.set({
@@ -1216,6 +1233,9 @@ export default class CanvasSelect extends EventBus {
   }
 
   handelMouseUpR(event: any) {
+    if (this.allowPanning) {
+      this.isDragging = false;
+    }
     if (
       this.isDrawing &&
       [1, 7, 8].includes(this.createType) &&
