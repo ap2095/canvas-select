@@ -494,8 +494,6 @@ export default class CanvasSelect extends EventBus {
 
       // // // // this.canvas.parentElement.scrollLeft = this.originX;
       // // // // this.canvas.parentElement.scrollTop = this.originY;
-      this.canvasParentNode.scrollLeft = this.originX;
-      this.canvasParentNode.scrollTop = this.originY;
     } else {
       this.evt = e;
       if (this.lock) return;
@@ -1191,18 +1189,13 @@ export default class CanvasSelect extends EventBus {
 
   handelMouseMoveR(event: any) {
     if (this.allowPanning && this.isDragging) {
-      console.log("ABCD", this.allowPanning, event);
       const deltaX = event.e.clientX - this.lastX;
       const deltaY = event.e.clientY - this.lastY;
       this.lastX = event.e.clientX;
       this.lastY = event.e.clientY;
 
-      this.canvas.relativePan(new (window as any).fabric.Point(deltaX, deltaY));
-      console.log("deltaX", deltaX);
-      console.log("deltaY", deltaY);
-      console.log("this.canvas", this.canvas);
-      // this.canvas.wrapperEl.scrollTop += deltaY;
-      // this.canvas.wrapperEl.scrollLeft += deltaX;
+      this.canvasParentNode.scrollLeft -= deltaX;
+      this.canvasParentNode.scrollTop -= deltaY;
     }
     if (this.isDrawing && [1, 7, 8].includes(this.createType)) {
       const currentPoint = this.canvas.getPointer(event.e);
@@ -1218,6 +1211,7 @@ export default class CanvasSelect extends EventBus {
       }
       this.lineObj = this.createConnector(this.startPoint, this.endPoint);
       this.lineObj.setControlsVisibility({ mtr: false });
+      this.lineObj["type"] = 6;
       if (this.lineObj?.index) {
         const findIndex = this.fabricObjList.findIndex((e) => e.index);
         if (findIndex) this.fabricObjList[findIndex] = this.lineObj;
@@ -1324,7 +1318,6 @@ export default class CanvasSelect extends EventBus {
       this.canvas.remove(this.lineObj);
     }
     this.lineObj = null;
-    this.createType = 0;
     this.parentRectangleConnectivity = null;
     this.childRectangleConnectivity = null;
     this.removeUnconnectedLines();
@@ -1358,7 +1351,6 @@ export default class CanvasSelect extends EventBus {
   handelObjectMove(event: any) {
     if (this.fabricObjList.includes(event.target)) {
       this.updateConnectors(event.target);
-      // // // this.updateConnectedLines(event.target);
     }
   }
 
@@ -1393,7 +1385,14 @@ export default class CanvasSelect extends EventBus {
     );
   }
 
-  createRectangle(left: any, top: any, width: any, height: any, fill: any) {
+  createRectangle(
+    left: any,
+    top: any,
+    width: any,
+    height: any,
+    fill = this.fillStyle,
+    strokeStyle = this.strokeStyle
+  ) {
     return new (window as any).fabric.Rect({
       left: left,
       top: top,
@@ -1402,7 +1401,7 @@ export default class CanvasSelect extends EventBus {
       fill: fill,
       hasBorders: true,
       strokeWidth: 2,
-      stroke: "black",
+      stroke: strokeStyle,
       strokeUniform: true,
     });
   }
@@ -1532,42 +1531,6 @@ export default class CanvasSelect extends EventBus {
     const intersectionRect2 = this.getIntersection(rectB, angle + Math.PI);
 
     return { intersectionRect1, intersectionRect2 };
-
-    // this.lineObj = this.createConnector(intersectionRect1, intersectionRect2);
-
-    // this.canvas.add(this.lineObj);
-    // this.canvas.renderAll();
-
-    // // // // if (nearestRect) {
-    // // // //   // Draw line and adjust endpoints
-    // // // //   const line = new fabric.Line(
-    // // // //     [currentRect.left, currentRect.top, nearestRect.left, nearestRect.top],
-    // // // //     {
-    // // // //       stroke: 'black',
-    // // // //       strokeWidth: 2,
-    // // // //     }
-    // // // //   );
-
-    // // // //   canvas.add(line);
-    // // // // }
-    // }
-    // // // // let boundsB = rectB.getBoundingRect();
-
-    // // // // let nearestPoint = new (window as any).fabric.Point(point.x, point.y);
-
-    // // // // if (point.x < boundsB.left) {
-    // // // //   nearestPoint.x = boundsB.left;
-    // // // // } else if (point.x > boundsB.left + boundsB.width) {
-    // // // //   nearestPoint.x = boundsB.left + boundsB.width;
-    // // // // }
-
-    // // // // if (point.y < boundsB.top) {
-    // // // //   nearestPoint.y = boundsB.top;
-    // // // // } else if (point.y > boundsB.top + boundsB.height) {
-    // // // //   nearestPoint.y = boundsB.top + boundsB.height;
-    // // // // }
-
-    // // // // return nearestPoint;
   }
 
   getCenter(rect: any) {
@@ -1603,13 +1566,13 @@ export default class CanvasSelect extends EventBus {
     this.canvas.renderAll();
   }
 
-  createConnector(startPoint: any, endPoint: any) {
+  createConnector(startPoint: any, endPoint: any, stroke: string | any = null) {
     return new (window as any).fabric.Line(
       [startPoint.x, startPoint.y, endPoint.x, endPoint.y],
       {
-        stroke: "green",
+        stroke: stroke || "green",
         strokeWidth: 2,
-        selectable: true,
+        selectable: false,
       }
     );
   }
@@ -1633,6 +1596,68 @@ export default class CanvasSelect extends EventBus {
     //   // Add image to the canvas
     //   this.canvas.add(img);
     // });
+  }
+
+  /**
+   * 设置数据
+   * @param data Array
+   */
+  loadData(data: AllShape[]) {
+    const objectsToRemove: any[] = [];
+    const window$ = window as any;
+    setTimeout(() => {
+      if (data?.length > 0) {
+        this.canvas.forEachObject((object: any) => {
+          if (
+            object instanceof window$.fabric.Rect ||
+            object instanceof window$.fabric.Circle ||
+            object instanceof window$.fabric.Line
+            // Add other shape classes here if needed
+          ) {
+            objectsToRemove.push(object);
+          }
+        });
+        // Remove the identified shapes from the canvas
+        objectsToRemove.forEach((object) => {
+          this.canvas.remove(object);
+        });
+        this.fabricObjList = [];
+        data.forEach((item, index) => {
+          if (Object.prototype.toString.call(item).indexOf("Object") > -1) {
+            if (item?.coor?.length > 0) {
+              if ([1, 7, 8].includes(item.type)) {
+                let points = this.getDomRect(item?.coor);
+                let obj = this.createRectangle(
+                  points.x,
+                  points.y,
+                  points.width,
+                  points.height,
+                  item.fillStyle,
+                  item.strokeStyle
+                );
+                obj["type"] = item.type;
+                obj.setControlsVisibility({ mtr: false });
+                obj["index"] = item.index;
+                obj["connectedRect"] = item.rectangleConnectivity;
+                obj["connectedLines"] = item.lineCoorIndex;
+                this.canvas.add(obj);
+                this.fabricObjList.push(obj);
+              } else if (item.type === 6) {
+                const startPoint = { x: item.coor[0][0], y: item.coor[0][1] };
+                const endPoint = { x: item.coor[1][0], y: item.coor[1][1] };
+                let lineObj = this.createConnector(startPoint, endPoint);
+                lineObj.setControlsVisibility({ mtr: false });
+                lineObj["index"] = item.index;
+                lineObj["type"] = item.type;
+                lineObj["connectedRect"] = item.rectangleConnectivity;
+                this.canvas.add(lineObj);
+                this.fabricObjList.push(lineObj);
+              }
+            }
+          }
+        });
+      }
+    });
   }
   /**
    * 设置数据
@@ -1920,7 +1945,7 @@ Determines if a given circle intersects with a line segment defined by two point
     // // // // this.ctx.fillStyle = fillStyle || this.fillStyle;
     // // // // this.ctx.strokeStyle =
     // // // //   active || creating
-    // // // //     ? this.activeStrokeStyle
+    // // // //     ? this.activeStrokeStylere
     // // // //     : strokeStyle || this.strokeStyle;
     const w = x1 - x0;
     const h = y1 - y0;
