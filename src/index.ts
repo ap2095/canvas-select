@@ -820,18 +820,7 @@ export default class CanvasSelect extends EventBus {
       });
     }
     this.canvas.renderAll();
-    // // // // if (this.activeShape.type) {
-    // // // //   if ([2, 4, 6].includes(this.activeShape.type) && e.key === "Escape") {
-    // // // //     if (this.activeShape.coor.length > 1 && this.activeShape.creating) {
-    // // // //       this.activeShape.coor.pop();
-    // // // //     } else {
-    // // // //       this.deleteByIndex(this.activeShape.index);
-    // // // //     }
-    // // // //     this.update();
-    // // // //   } else if (e.key === this.RemoveSelectionOnKey) {
-    // // // //     this.deleteByIndex(this.activeShape.index);
-    // // // //   }
-    // // // // }
+    this.annotationOutput();
   }
 
   private keyValueConnectivity(e: MouseEvent | TouchEvent) {
@@ -1149,6 +1138,7 @@ export default class CanvasSelect extends EventBus {
     this.startPoint = this.canvas.getPointer(event.e);
     if (this.allowPanning && event.e.button === 0) {
       this.isDragging = true;
+      this.createType = 0;
       this.lastX = event.e.clientX;
       this.lastY = event.e.clientY;
     }
@@ -1267,10 +1257,31 @@ export default class CanvasSelect extends EventBus {
       });
       this.addReferenceAndConnectLine(startRect, endRect);
     }
+
+    // if (this.activeRect && [1, 7, 8].includes(this.activeRect?.type)) {
+    //   if (this.activeRect?.previousCoor?.length > 0) {
+    //     const [[x0, y0], [x1, y1]] = this.fabric_rect_to_coordinates(
+    //       this.activeRect
+    //     );
+    //     const [[a0, b0], [a1, b1]] = this.activeRect.previousCoor;
+
+    //     if (
+    //       Math.abs(x1 - x0) === Math.abs(a1 - a0) &&
+    //       Math.abs(y1 - y0) === Math.abs(b1 - b0)
+    //     ) {
+    //       return;
+    //     }
+    //   }
+    //   this.activeRect.previousCoor = this.activeRect.coor;
+    //   this.emit("updatedRect", this.activeRect);
+    // }
     if (this.createType === 0) {
       this.activeRect = null;
     }
     this.toggleSelection(true);
+    if (!this.isDragging) {
+      this.annotationOutput();
+    }
   }
 
   addReferenceAndConnectLine(startRect: any, endRect: any) {
@@ -1506,6 +1517,11 @@ export default class CanvasSelect extends EventBus {
       const intersectionRect1 = this.getIntersection(rect1, angle);
       const intersectionRect2 = this.getIntersection(rect2, angle + Math.PI);
 
+      line.coor = [
+        [intersectionRect1.x, intersectionRect1.y],
+        [intersectionRect2.x, intersectionRect2.y],
+      ];
+
       line.set({
         x1: intersectionRect1.x,
         y1: intersectionRect1.y,
@@ -1513,6 +1529,7 @@ export default class CanvasSelect extends EventBus {
         y2: intersectionRect2.y,
       });
     });
+    this.annotationOutput();
   }
 
   // Function to calculate the nearest border point
@@ -1573,8 +1590,50 @@ export default class CanvasSelect extends EventBus {
         stroke: stroke || "green",
         strokeWidth: 2,
         selectable: false,
+        coor: [
+          [startPoint.x, startPoint.y],
+          [endPoint.x, endPoint.y],
+        ],
       }
     );
+  }
+
+  private annotationOutput() {
+    setTimeout(() => {
+      this.dataset = [];
+      for (const ele of this.fabricObjList) {
+        const coor: [Point, Point] = [
+          [ele.left, ele.top],
+          [ele.width, ele.height],
+        ];
+        if ([1, 7, 8].includes(ele.type)) {
+          ele["coor"] = coor;
+          const rectShape = new Rect({ coor: coor }, ele.index);
+          rectShape.type = ele.type;
+          rectShape.active = false;
+          rectShape.creating = false;
+          rectShape.rectangleConnectivity = ele.connectedRect;
+          rectShape.lineCoorIndex = ele.connectedLines;
+          // rectShape.canvasObj = ele;
+          rectShape.strokeStyle = this.strokeStyle;
+          rectShape.fillStyle = this.fillStyle;
+          rectShape.data = ele.data;
+          this.dataset.push(rectShape);
+        } else if (ele.type === 6) {
+          const lineShape = new Line({ coor: ele.coor }, ele.index);
+          lineShape.type = ele.type;
+          lineShape.active = false;
+          lineShape.creating = false;
+          lineShape.rectangleConnectivity = ele.connectedRect;
+          lineShape.lineCoorIndex = ele.connectedLines;
+          lineShape.data = ele.data;
+          // lineShape.canvasObj = ele;
+          lineShape.coor = ele.coor;
+          this.dataset.push(lineShape);
+        }
+      }
+      this.emit("updated", this.dataset);
+    });
   }
 
   /**
@@ -1626,7 +1685,13 @@ export default class CanvasSelect extends EventBus {
           if (Object.prototype.toString.call(item).indexOf("Object") > -1) {
             if (item?.coor?.length > 0) {
               if ([1, 7, 8].includes(item.type)) {
-                let points = this.getDomRect(item?.coor);
+                // let points = this.getDomRect(item?.coor);
+                let points = {
+                  x: item?.coor[0][0],
+                  y: item?.coor[0][1],
+                  width: item?.coor[1][0],
+                  height: item?.coor[1][1],
+                };
                 let obj = this.createRectangle(
                   points.x,
                   points.y,
@@ -1640,6 +1705,7 @@ export default class CanvasSelect extends EventBus {
                 obj["index"] = item.index;
                 obj["connectedRect"] = item.rectangleConnectivity;
                 obj["connectedLines"] = item.lineCoorIndex;
+                obj["data"] = item.data;
                 this.canvas.add(obj);
                 this.fabricObjList.push(obj);
               } else if (item.type === 6) {
@@ -1650,6 +1716,7 @@ export default class CanvasSelect extends EventBus {
                 lineObj["index"] = item.index;
                 lineObj["type"] = item.type;
                 lineObj["connectedRect"] = item.rectangleConnectivity;
+                lineObj["data"] = item.data;
                 this.canvas.add(lineObj);
                 this.fabricObjList.push(lineObj);
               }
@@ -1953,21 +2020,7 @@ Determines if a given circle intersects with a line segment defined by two point
     // // // // this.ctx.strokeRect(x0, y0, w, h);
     // // // // if (!creating) this.ctx.fillRect(x0, y0, w, h);
 
-    const rect = new (window as any).fabric.Rect({
-      left: x0, // x-coordinate
-      top: y0, // y-coordinate
-      width: w,
-      height: h,
-      fill: fillStyle || this.fillStyle,
-      stroke:
-        active || creating
-          ? this.activeStrokeStyle
-          : strokeStyle || this.strokeStyle,
-      strokeWidth: this.LineWidth,
-    });
     // // // // this.ctx.restore();
-    // this.canvas.add(rect);
-    // this.canvas.renderAll();
     if (!this.hideAnnotateLabels) this.drawLabel(coor[0], shape);
   }
   /**
@@ -2228,74 +2281,75 @@ Determines if a given circle intersects with a line segment defined by two point
   update() {
     clearTimeout(this.timer);
     this.timer = setTimeout(() => {
-      let renderList = this.focusMode
-        ? this.activeShape.type
-          ? [this.activeShape]
-          : []
-        : this.dataset;
-      for (let i = 0; i < renderList.length; i++) {
-        const shape = renderList[i];
-        if (shape.hide) continue;
-        switch (shape.type) {
-          case 1:
-            this.drawRect(shape as Rect);
-            break;
-          case 2:
-            this.drawPolygon(shape as Polygon);
-            break;
-          case 3:
-            this.drawDot(shape as Dot);
-            break;
-          case 4:
-          case 6:
-            if (
-              !this.activeShape.creating &&
-              shape.rectangleConnectivity.length > 0
-            ) {
-              this.parentRectangleConnectivity = this.dataset.find(
-                (i) => i.index === shape.rectangleConnectivity[0][0]
-              );
-              this.childRectangleConnectivity = this.dataset.find(
-                (i) => i.index === shape.rectangleConnectivity[0][1]
-              );
+      // let renderList = this.focusMode
+      //   ? this.activeShape.type
+      //     ? [this.activeShape]
+      //     : []
+      //   : this.dataset;
+      // for (let i = 0; i < renderList.length; i++) {
+      //   const shape = renderList[i];
+      //   if (shape.hide) continue;
+      //   switch (shape.type) {
+      //     case 1:
+      //       this.drawRect(shape as Rect);
+      //       break;
+      //     case 2:
+      //       this.drawPolygon(shape as Polygon);
+      //       break;
+      //     case 3:
+      //       this.drawDot(shape as Dot);
+      //       break;
+      //     case 4:
+      //     case 6:
+      //       if (
+      //         !this.activeShape.creating &&
+      //         shape.rectangleConnectivity.length > 0
+      //       ) {
+      //         this.parentRectangleConnectivity = this.dataset.find(
+      //           (i) => i.index === shape.rectangleConnectivity[0][0]
+      //         );
+      //         this.childRectangleConnectivity = this.dataset.find(
+      //           (i) => i.index === shape.rectangleConnectivity[0][1]
+      //         );
 
-              if (
-                this.parentRectangleConnectivity &&
-                this.childRectangleConnectivity
-              ) {
-                let rect1: any = this.getDomRect(
-                  this.parentRectangleConnectivity.coor
-                );
-                let rect2: any = this.getDomRect(
-                  this.childRectangleConnectivity.coor
-                );
-                this.drawShortestLine(rect1, rect2, shape);
-              }
-            } else {
-              this.drawLine(shape as Line | Connectivity);
-            }
-            break;
-          case 5:
-            this.drawCirle(shape as Circle);
-            break;
-          case 7:
-          case 9:
-            this.drawRect(shape as Rect);
-            break;
-          case 8:
-            this.drawRect(shape as Rect);
-            break;
-          default:
-            break;
-        }
-      }
-      if (
-        [1, 2, 4, 5, 6, 7, 8].includes(this.activeShape.type) &&
-        !this.activeShape.hide
-      ) {
-        this.drawCtrlList(this.activeShape);
-      }
+      //         if (
+      //           this.parentRectangleConnectivity &&
+      //           this.childRectangleConnectivity
+      //         ) {
+      //           let rect1: any = this.getDomRect(
+      //             this.parentRectangleConnectivity.coor
+      //           );
+      //           let rect2: any = this.getDomRect(
+      //             this.childRectangleConnectivity.coor
+      //           );
+      //           this.drawShortestLine(rect1, rect2, shape);
+      //         }
+      //       } else {
+      //         this.drawLine(shape as Line | Connectivity);
+      //       }
+      //       break;
+      //     case 5:
+      //       this.drawCirle(shape as Circle);
+      //       break;
+      //     case 7:
+      //     case 9:
+      //       this.drawRect(shape as Rect);
+      //       break;
+      //     case 8:
+      //       this.drawRect(shape as Rect);
+      //       break;
+      //     default:
+      //       break;
+      //   }
+      // }
+      // if (
+      //   [1, 2, 4, 5, 6, 7, 8].includes(this.activeShape.type) &&
+      //   !this.activeShape.hide
+      // ) {
+      //   this.drawCtrlList(this.activeShape);
+      // }
       // // // // this.ctx.restore();
+      // this.emit("updated", this.dataset);
       this.emit("updated", this.dataset);
     });
   }
