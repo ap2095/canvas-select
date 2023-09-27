@@ -143,6 +143,12 @@ export default class CanvasSelect extends EventBus {
 
   rightClickMoveEvent: any = true;
 
+  activeShapeCoor: any = [];
+
+  rotateAngle = 0;
+
+  isRotated = false;
+
   /**
    * @param el Valid CSS selector string, or DOM
    * @param src image src
@@ -630,24 +636,27 @@ export default class CanvasSelect extends EventBus {
     if (this.activeShape.type) {
       this.activeShape.dragging = false;
       if (this.activeShape.creating) {
-        if (this.activeShape.type === 1) {
-          const [[x0, y0], [x1, y1]] = this.activeShape.coor;
-          if (
-            Math.abs(x0 - x1) < this.MIN_WIDTH ||
-            Math.abs(y0 - y1) < this.MIN_HEIGHT
-          ) {
-            this.dataset.pop();
-            this.emit(
-              "warn",
-              `Width cannot be less than ${this.MIN_WIDTH},Height cannot be less than ${this.MIN_HEIGHT}`
-            );
-          } else {
-            this.activeShape.coor = [
-              [Math.min(x0, x1), Math.min(y0, y1)],
-              [Math.max(x0, x1), Math.max(y0, y1)],
-            ];
-            this.activeShape.creating = false;
-            this.emit("add", this.activeShape);
+        if (this.activeShape.type === 1 || this.activeShape.type === 4) {
+          if (this.activeShape.coor.length == 2) {
+            const [[x0, y0], [x1, y1]] = this.activeShape.coor;
+            this.activeShapeCoor = this.activeShape.coor
+            if (
+              Math.abs(x0 - x1) < this.MIN_WIDTH ||
+              Math.abs(y0 - y1) < this.MIN_HEIGHT
+            ) {
+              this.dataset.pop();
+              this.emit(
+                "warn",
+                `Width cannot be less than ${this.MIN_WIDTH},Height cannot be less than ${this.MIN_HEIGHT}`
+              );
+            } else {
+              this.activeShape.coor = [
+                [Math.min(x0, x1), Math.min(y0, y1)],
+                [Math.max(x0, x1), Math.max(y0, y1)],
+              ];
+              this.activeShape.creating = false;
+              this.emit("add", this.activeShape);
+            }
           }
         } else if (this.activeShape.type === 5) {
           if (this.activeShape.radius < this.MIN_RADIUS) {
@@ -1888,5 +1897,76 @@ Determines if a given circle intersects with a line segment defined by two point
     this.canvas.style.height = null;
     this.initSetting();
     this.update();
+  }
+  
+  /**
+   * Calculates and returns the original angle of the image on the canvas.
+   *
+   * @returns The original angle of the image in degrees.
+   * @remarks
+   * This function retrieves the current transformation matrix of the canvas
+   * context, calculates the angle from the matrix, and returns it in degrees.
+   * The angle represents the current rotation applied to the image on the canvas.
+   *
+   * @example
+   * // Get the original angle of the image
+   * const originalAngle = getOriginalImageAngle();
+   */
+  getOriginalImageAngle() {
+    // Get the current transformation matrix
+    const transform = this.ctx.getTransform();
+  
+    // Calculate the angle from the transformation matrix
+    const angleRadians = Math.atan2(transform.b, transform.a);
+    const angleDegrees = (angleRadians * 180) / Math.PI;
+  
+    return angleDegrees;
+  }
+
+  /**
+   * Rotates an image loaded in a canvas by a specified angle.
+   *
+   * @param angle - The angle of rotation in degrees.
+   * @remarks
+   * This function saves the current canvas state, calculates the dimensions of
+   * the rotated image's bounding box, adjusts the canvas dimensions to fit
+   * the rotated image, clears the canvas, translates the canvas to its center,
+   * rotates the canvas by the specified angle, and then draws the rotated image
+   * centered on the canvas. After the rotation, the original canvas state is restored.
+   *
+   * @example
+   * // Rotate the image by 45 degrees
+   * rotate(45);
+   */
+  rotate(angle: any) {
+    this.ctx.save();
+
+    let rotateAngle = this.degrees_to_radians(angle);
+
+    // Calculate the bounding box of the rotated image
+    const rotatedWidth = Math.abs(this.image.width * Math.cos(rotateAngle)) + Math.abs(this.image.height * Math.sin(rotateAngle));
+    const rotatedHeight = Math.abs(this.image.width * Math.sin(rotateAngle)) + Math.abs(this.image.height * Math.cos(rotateAngle));
+
+    // Set canvas dimensions
+    this.canvas.width = this.image.height;
+    this.canvas.height = this.image.width;
+
+    // Clear canvas
+    this.ctx.clearRect(0, 0, rotatedWidth, rotatedHeight);
+
+    // Translate canvas to its center
+    this.ctx.translate(rotatedWidth / 2, rotatedHeight / 2);
+
+    // Rotate canvas
+    this.ctx.rotate(-rotateAngle);
+
+    // Draw the rotated image centered on the canvas
+    this.ctx.drawImage(this.image, -this.image.width / 2, -this.image.height / 2);
+
+    this.ctx.restore();
+  }
+
+  private degrees_to_radians(deg: any){
+    return deg * (Math.PI/180);
   }
 }

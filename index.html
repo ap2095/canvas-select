@@ -67,6 +67,7 @@
           <button onclick="focusMode()">focus mode</button>
           <button onclick="setDragging(true)">start dragging</button>
           <button onclick="setDragging(false)">stop dragging</button>
+          <button onclick="rotate()">Rotate</button>
         </div>
       </div>
       <!-- <div class="right">
@@ -77,10 +78,11 @@
     <script src="./lib/canvas-select.min.js"></script>
     <script>
       // alert(document.body.clientWidth)
+      let rotateAngle = 0;
       const output = document.getElementById("output");
       const instance = new CanvasSelect(
         ".container",
-        "./src/assets/images/cv.png"
+        "./src/assets/images/rotate-1.png"
       );
       // instance.focusMode = true
       instance.ctrlRadius = navigator.userAgent.includes("Mobile") ? 6 : 3;
@@ -278,12 +280,18 @@
       instance.on("load", (src) => {
         instance.setData(option);
       });
-      instance.on("warn", (msg) => {});
+      instance.on("warn", (msg) => {
+        console.warn("warning:", msg);
+      });
       // Get updated rectangle records
       instance.on("updatedRect", (info) => {});
       // 添加
       instance.on("add", (info) => {
         window.info = info;
+        if (info.type == 4) {
+          instance.createType = 0;
+          findAngle(info.coor);
+        }
         if (info.type === 7) {
           info["data"] = {
             extractType: "key",
@@ -326,6 +334,32 @@
       }
       function setDragging(value) {
         instance.setDragging = value;
+      }
+
+      function rotate() {
+        if (rotateAngle > 0) {
+          instance.rotate(rotateAngle);
+        }
+      }
+
+      function findAngle(coor) {
+        const linePoints = [coor[0][0], coor[1][0], coor[0][1], coor[1][1]];
+
+        // Calculate angle
+        const deltaX = linePoints[1] - linePoints[0];
+        const deltaY = linePoints[3] - linePoints[2];
+        const angleRadians = Math.atan2(deltaY, deltaX);
+        const angleDegrees = (angleRadians * 180) / Math.PI;
+
+        const originalAngle = instance.getOriginalImageAngle();
+        console.log("originalAngle:", originalAngle);
+        console.log("angleDegrees:", angleDegrees);
+        console.log("round(angleDegrees):", Math.round(angleDegrees));
+        console.log("angleRadians:", angleRadians);
+
+        rotateAngle = angleDegrees;
+
+        instance.createType = 0;
       }
     </script>
     <!-- <script src="https://unpkg.com/stats.js@0.17.0/build/stats.min.js"> </script>
