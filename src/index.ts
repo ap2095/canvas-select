@@ -1952,11 +1952,12 @@ Determines if a given circle intersects with a line segment defined by two point
       Math.abs(this.image.height * Math.cos(rotateAngle));
 
     // Set canvas dimensions
-    this.canvas.width = this.image.height;
-    this.canvas.height = this.image.width;
+    this.canvas.width = rotatedWidth;
+    this.canvas.height = rotatedHeight;
 
-    // Clear canvas
-    this.ctx.clearRect(0, 0, rotatedWidth, rotatedHeight);
+    // Clear canvas and fill with white background
+    this.ctx.fillStyle = "white"; // Set background color to white
+    this.ctx.fillRect(0, 0, rotatedWidth, rotatedHeight);
 
     // Translate canvas to its center
     this.ctx.translate(rotatedWidth / 2, rotatedHeight / 2);
