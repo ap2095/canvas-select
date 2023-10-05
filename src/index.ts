@@ -94,7 +94,7 @@ export default class CanvasSelect extends EventBus {
 
   scrollZoom = true; // 滚动缩放
 
-  timer: NodeJS.Timer;
+  timer: NodeJS.Timer | any;
 
   dblTouch = 300; // 最小touch双击时间
 
@@ -639,7 +639,7 @@ export default class CanvasSelect extends EventBus {
         if (this.activeShape.type === 1 || this.activeShape.type === 4) {
           if (this.activeShape.coor.length == 2) {
             const [[x0, y0], [x1, y1]] = this.activeShape.coor;
-            this.activeShapeCoor = this.activeShape.coor
+            this.activeShapeCoor = this.activeShape.coor;
             if (
               Math.abs(x0 - x1) < this.MIN_WIDTH ||
               Math.abs(y0 - y1) < this.MIN_HEIGHT
@@ -1898,7 +1898,7 @@ Determines if a given circle intersects with a line segment defined by two point
     this.initSetting();
     this.update();
   }
-  
+
   /**
    * Calculates and returns the original angle of the image on the canvas.
    *
@@ -1915,11 +1915,11 @@ Determines if a given circle intersects with a line segment defined by two point
   getOriginalImageAngle() {
     // Get the current transformation matrix
     const transform = this.ctx.getTransform();
-  
+
     // Calculate the angle from the transformation matrix
     const angleRadians = Math.atan2(transform.b, transform.a);
     const angleDegrees = (angleRadians * 180) / Math.PI;
-  
+
     return angleDegrees;
   }
 
@@ -1944,8 +1944,12 @@ Determines if a given circle intersects with a line segment defined by two point
     let rotateAngle = this.degrees_to_radians(angle);
 
     // Calculate the bounding box of the rotated image
-    const rotatedWidth = Math.abs(this.image.width * Math.cos(rotateAngle)) + Math.abs(this.image.height * Math.sin(rotateAngle));
-    const rotatedHeight = Math.abs(this.image.width * Math.sin(rotateAngle)) + Math.abs(this.image.height * Math.cos(rotateAngle));
+    const rotatedWidth =
+      Math.abs(this.image.width * Math.cos(rotateAngle)) +
+      Math.abs(this.image.height * Math.sin(rotateAngle));
+    const rotatedHeight =
+      Math.abs(this.image.width * Math.sin(rotateAngle)) +
+      Math.abs(this.image.height * Math.cos(rotateAngle));
 
     // Set canvas dimensions
     this.canvas.width = this.image.height;
@@ -1961,12 +1965,16 @@ Determines if a given circle intersects with a line segment defined by two point
     this.ctx.rotate(-rotateAngle);
 
     // Draw the rotated image centered on the canvas
-    this.ctx.drawImage(this.image, -this.image.width / 2, -this.image.height / 2);
+    this.ctx.drawImage(
+      this.image,
+      -this.image.width / 2,
+      -this.image.height / 2
+    );
 
     this.ctx.restore();
   }
 
-  private degrees_to_radians(deg: any){
-    return deg * (Math.PI/180);
+  private degrees_to_radians(deg: any) {
+    return deg * (Math.PI / 180);
   }
 }
