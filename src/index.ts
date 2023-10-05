@@ -1940,29 +1940,30 @@ Determines if a given circle intersects with a line segment defined by two point
    */
   rotate(angle: any) {
     this.ctx.save();
-
+  
     let rotateAngle = this.degrees_to_radians(angle);
-
+  
     // Calculate the bounding box of the rotated image
     const rotatedWidth = Math.abs(this.image.width * Math.cos(rotateAngle)) + Math.abs(this.image.height * Math.sin(rotateAngle));
     const rotatedHeight = Math.abs(this.image.width * Math.sin(rotateAngle)) + Math.abs(this.image.height * Math.cos(rotateAngle));
-
+  
     // Set canvas dimensions
-    this.canvas.width = this.image.height;
-    this.canvas.height = this.image.width;
-
-    // Clear canvas
-    this.ctx.clearRect(0, 0, rotatedWidth, rotatedHeight);
-
+    this.canvas.width = rotatedWidth;
+    this.canvas.height = rotatedHeight;
+  
+    // Clear canvas and fill with white background
+    this.ctx.fillStyle = 'white'; // Set background color to white
+    this.ctx.fillRect(0, 0, rotatedWidth, rotatedHeight);
+  
     // Translate canvas to its center
     this.ctx.translate(rotatedWidth / 2, rotatedHeight / 2);
-
+  
     // Rotate canvas
     this.ctx.rotate(-rotateAngle);
-
+  
     // Draw the rotated image centered on the canvas
     this.ctx.drawImage(this.image, -this.image.width / 2, -this.image.height / 2);
-
+  
     this.ctx.restore();
   }
 
