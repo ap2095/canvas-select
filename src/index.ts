@@ -650,10 +650,12 @@ export default class CanvasSelect extends EventBus {
                 `Width cannot be less than ${this.MIN_WIDTH},Height cannot be less than ${this.MIN_HEIGHT}`
               );
             } else {
-              this.activeShape.coor = [
-                [Math.min(x0, x1), Math.min(y0, y1)],
-                [Math.max(x0, x1), Math.max(y0, y1)],
-              ];
+              if (this.activeShape.type === 1) {
+                this.activeShape.coor = [
+                  [Math.min(x0, x1), Math.min(y0, y1)],
+                  [Math.max(x0, x1), Math.max(y0, y1)],
+                ];
+              }
               this.activeShape.creating = false;
               this.emit("add", this.activeShape);
             }
