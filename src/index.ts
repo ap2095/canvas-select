@@ -329,13 +329,12 @@ export default class CanvasSelect extends EventBus {
         if (this.activeShape.creating) {
           // 创建中
           if ([2, 4, 6].includes(this.activeShape.type)) {
-            const [x, y] =
-              this.activeShape.coor[this.activeShape.coor.length - 1];
+            const [x, y] = this.activeShape.coor[this.activeShape.coor.length - 1];
+            const nx = Math.round(offsetX - this.originX / this.scale);
+            const ny = Math.round(offsetY - this.originY / this.scale);
+            this.activeShape.coor.push([nx, ny]);
+            this.childRectangleConnectivity = null;
             if (x !== offsetX && y !== offsetY) {
-              const nx = Math.round(offsetX - this.originX / this.scale);
-              const ny = Math.round(offsetY - this.originY / this.scale);
-              this.activeShape.coor.push([nx, ny]);
-              this.childRectangleConnectivity = null;
               if (this.activeShape.type === 6) this.createConnectivity();
             }
           }
@@ -640,10 +639,7 @@ export default class CanvasSelect extends EventBus {
           if (this.activeShape.coor.length == 2) {
             const [[x0, y0], [x1, y1]] = this.activeShape.coor;
             this.activeShapeCoor = this.activeShape.coor;
-            if (
-              Math.abs(x0 - x1) < this.MIN_WIDTH ||
-              Math.abs(y0 - y1) < this.MIN_HEIGHT
-            ) {
+            if (this.activeShape.type === 1 && (Math.abs(x0 - x1) < this.MIN_WIDTH || Math.abs(y0 - y1) < this.MIN_HEIGHT)) {
               this.dataset.pop();
               this.emit(
                 "warn",
@@ -843,7 +839,7 @@ export default class CanvasSelect extends EventBus {
       this.parentRectangleConnectivity &&
       this.childRectangleConnectivity &&
       this.parentRectangleConnectivity.index !==
-        this.childRectangleConnectivity.index
+      this.childRectangleConnectivity.index
     ) {
       // Push the indices of parent and child rectangle connectivity to the rectangleConnectivity array
       this.rectangleConnectivity.push([
@@ -1161,13 +1157,13 @@ export default class CanvasSelect extends EventBus {
       mouseX >= this.originX + this.canvas.parentElement.scrollLeft &&
       mouseY >= this.originY + this.canvas.parentElement.scrollTop &&
       mouseX <=
-        this.originX +
-          this.IMAGE_ORIGIN_WIDTH * this.scale +
-          this.canvas.parentElement.scrollLeft &&
+      this.originX +
+      this.IMAGE_ORIGIN_WIDTH * this.scale +
+      this.canvas.parentElement.scrollLeft &&
       mouseY <=
-        this.originY +
-          this.IMAGE_ORIGIN_HEIGHT * this.scale +
-          this.canvas.parentElement.scrollTop
+      this.originY +
+      this.IMAGE_ORIGIN_HEIGHT * this.scale +
+      this.canvas.parentElement.scrollTop
     );
   }
   /**
@@ -1225,7 +1221,7 @@ export default class CanvasSelect extends EventBus {
     const [x0, y0] = center.map((a) => a * this.scale);
     const distance = Math.sqrt(
       (x0 + (this.originX + this.canvas.parentElement.scrollLeft) - x) ** 2 +
-        (y0 + (this.originY + this.canvas.parentElement.scrollTop) - y) ** 2
+      (y0 + (this.originY + this.canvas.parentElement.scrollTop) - y) ** 2
     );
     return distance <= r;
   }
@@ -1942,9 +1938,9 @@ Determines if a given circle intersects with a line segment defined by two point
    */
   rotate(angle: any) {
     this.ctx.save();
-  
+
     let rotateAngle = this.degrees_to_radians(angle);
-  
+
     // Calculate the bounding box of the rotated image
     const rotatedWidth =
       Math.abs(this.image.width * Math.cos(rotateAngle)) +
@@ -1952,28 +1948,28 @@ Determines if a given circle intersects with a line segment defined by two point
     const rotatedHeight =
       Math.abs(this.image.width * Math.sin(rotateAngle)) +
       Math.abs(this.image.height * Math.cos(rotateAngle));
-  
+
     // Calculate the canvas dimensions to fit the rotated image without making it too big
     const canvasWidth = Math.min(rotatedWidth, this.image.width);
     const canvasHeight = Math.min(rotatedHeight, this.image.height);
-  
+
     // Clear canvas and fill with white background
     this.ctx.fillRect(0, 0, canvasWidth, canvasHeight);
     this.ctx.fillStyle = "white"; // Set background color to white
-  
+
     // Set canvas dimensions
     this.canvas.width = canvasWidth;
     this.canvas.height = canvasHeight;
-  
+
     // Translate canvas to its center
     this.ctx.translate(canvasWidth / 2, canvasHeight / 2);
-  
+
     // Rotate canvas
     this.ctx.rotate(-rotateAngle);
-  
+
     // Draw the rotated image centered on the canvas
     this.ctx.drawImage(this.image, -this.image.width / 2, -this.image.height / 2);
-  
+
     this.ctx.restore();
   }
 
